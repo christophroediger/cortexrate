@@ -16,7 +16,7 @@ type ErrorResponseBody = {
 
 type SignUpResponseBody = {
   data?: {
-    status?: "authenticated" | "confirmation_required";
+    status?: "authenticated" | "confirmation_required" | "confirmation_resent";
     redirect_to?: string;
   };
 };
@@ -64,12 +64,22 @@ export function SignUpForm({ redirectTo }: SignUpFormProps) {
       }
 
       if (responseBody.data.status === "authenticated") {
-        router.push(responseBody.data.redirect_to || "/");
-        router.refresh();
+        setSuccessMessage("Account created successfully.");
+        window.setTimeout(() => {
+          router.push(responseBody.data?.redirect_to || "/");
+          router.refresh();
+        }, 450);
         return;
       }
 
-      setSuccessMessage("Check your email to finish signing up, then log in.");
+      if (responseBody.data.status === "confirmation_resent") {
+        setSuccessMessage(
+          "Your account is not confirmed yet. We sent you a new confirmation email."
+        );
+        return;
+      }
+
+      setSuccessMessage("Check your email to confirm your account.");
     } catch {
       setErrorMessage("Sign-up failed.");
     } finally {

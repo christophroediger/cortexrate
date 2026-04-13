@@ -27,12 +27,14 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsPending(true);
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -56,8 +58,11 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
         return;
       }
 
-      router.push(responseBody.data?.redirect_to || "/");
-      router.refresh();
+      setSuccessMessage("Logged in successfully");
+      window.setTimeout(() => {
+        router.push(responseBody.data?.redirect_to || "/");
+        router.refresh();
+      }, 450);
     } catch {
       setErrorMessage("Log-in failed.");
     } finally {
@@ -131,6 +136,7 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
       </p>
 
       {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
+      {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
     </form>
   );
 }

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
-import { env, getAppUrl } from "@/lib/env";
+import { signUpWithEmailPassword } from "@/server/services/auth-signup";
 
 const signupRequestSchema = z.object({
   email: z.string().email(),
@@ -12,64 +12,31 @@ const signupRequestSchema = z.object({
   redirect_to: z.string().optional()
 });
 
-type SupabaseSignupResponse = {
-  access_token?: string;
-  refresh_token?: string | null;
-  user?: {
-    id: string;
-    email?: string | null;
-  } | null;
-};
-
 export async function POST(request: Request) {
   try {
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-      throw new ApiError(500, "CONFIG_ERROR", "Supabase authentication is not configured.");
-    }
-
     const requestBody = await request.json();
     const parsedBody = signupRequestSchema.safeParse(requestBody);
-    const emailRedirectTo = new URL("/login", getAppUrl()).toString();
 
     if (!parsedBody.success) {
       throw new ApiError(400, "BAD_REQUEST", "Invalid sign-up request.");
     }
 
-    const response = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: env.SUPABASE_ANON_KEY
-      },
-      body: JSON.stringify({
-        email: parsedBody.data.email,
-        password: parsedBody.data.password,
-        email_redirect_to: emailRedirectTo
-      }),
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new ApiError(400, "BAD_REQUEST", "Sign-up could not be completed.");
-    }
-
-    const authBody = (await response.json()) as SupabaseSignupResponse;
+    const result = await signUpWithEmailPassword(
+      parsedBody.data.email,
+      parsedBody.data.password,
+      parsedBody.data.redirect_to
+    );
     const nextResponse = NextResponse.json({
-      data: authBody.access_token
-        ? {
-            status: "authenticated",
-            redirect_to: parsedBody.data.redirect_to || "/"
-          }
-        : {
-            status: "confirmation_required",
-            redirect_to: "/login"
-          }
+      data: {
+        status: result.status,
+        redirect_to: result.redirectTo
+      }
     });
 
-    if (authBody.access_token) {
+    if (result.status === "authenticated") {
       setAuthCookies(nextResponse, {
-        access_token: authBody.access_token,
-        refresh_token: authBody.refresh_token
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken
       });
     }
 
