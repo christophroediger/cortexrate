@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
-import { env } from "@/lib/env";
+import { env, getAppUrl } from "@/lib/env";
 
 const signupRequestSchema = z.object({
   email: z.string().email(),
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
 
     const requestBody = await request.json();
     const parsedBody = signupRequestSchema.safeParse(requestBody);
+    const emailRedirectTo = new URL("/login", getAppUrl()).toString();
 
     if (!parsedBody.success) {
       throw new ApiError(400, "BAD_REQUEST", "Invalid sign-up request.");
@@ -42,7 +43,8 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         email: parsedBody.data.email,
-        password: parsedBody.data.password
+        password: parsedBody.data.password,
+        email_redirect_to: emailRedirectTo
       }),
       cache: "no-store"
     });

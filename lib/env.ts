@@ -28,6 +28,10 @@ if (!parsedEnv.success) {
 
 export const env = parsedEnv.data;
 
+export function getAppUrl() {
+  return env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+}
+
 export function getConfigHealth() {
   return {
     appUrlConfigured: Boolean(env.NEXT_PUBLIC_APP_URL),
