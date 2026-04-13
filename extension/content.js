@@ -1,0 +1,766 @@
+(function cortexRateBootstrap() {
+  console.log("CortexRate content script loaded");
+
+  const extensionConfig = globalThis.CORTEXRATE_EXTENSION_CONFIG;
+
+  if (!extensionConfig?.baseUrl) {
+    console.error("CortexRate extension config missing baseUrl");
+    return;
+  }
+
+  const BADGE_ID = "cortexrate-extension-badge";
+  const API_BASE_URL = extensionConfig.baseUrl;
+  const RETRY_DELAY_MS = 800;
+  const INITIAL_RETRY_DELAYS_MS = [250, 500, 800, 1200, 1800];
+
+  let lastResolvedFingerprint = null;
+  let pendingFingerprint = null;
+  let scheduledRun = null;
+  let linkedCanonicalItemId = null;
+  let unresolvedObservedIdentityId = null;
+  let currentUrl = window.location.href;
+  let retryAttempt = 0;
+  let lastStableBadgeState = null;
+
+  const titleSelectors = [
+    "main h1",
+    "h1",
+    "[data-testid*='title']",
+    "[class*='title']",
+    "[class*='name']",
+    "main *"
+  ];
+
+  const creatorSelectors = [
+    "[data-testid*='creator']",
+    "[aria-label*='creator' i]",
+    "[class*='creator']",
+    "[class*='author']",
+    "[class*='artist']",
+    "[class*='name']",
+    "main p",
+    "main span",
+    "main div",
+    "main *"
+  ];
+
+  const typeSelectors = [
+    "[data-testid*='type']",
+    "[aria-label*='type' i]",
+    "[class*='type']",
+    "main",
+    "body"
+  ];
+
+  const NOISE_PATTERNS = [
+    /\blog(?:\s|-)?in\b/i,
+    /\bsign(?:\s|-)?in\b/i,
+    /\bsign(?:\s|-)?up\b/i,
+    /\bsearch\b/i,
+    /\bfilter\b/i,
+    /\bmenu\b/i,
+    /\bhome\b/i,
+    /\bsettings\b/i,
+    /\bprofile\b/i,
+    /\blibrary\b/i,
+    /\bnotification\b/i,
+    /\baccount\b/i,
+    /\bshare\b/i,
+    /\bdownload\b/i,
+    /\bupload\b/i,
+    /\bdelete\b/i,
+    /\bedit\b/i,
+    /\bsave\b/i,
+    /\bcortexrate\b/i
+  ];
+
+  function isVisible(element) {
+    if (!element) return false;
+
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
+  }
+
+  function getCleanText(element) {
+    if (!element || !isVisible(element)) {
+      return null;
+    }
+
+    const text = element.textContent?.trim().replace(/\s+/g, " ");
+    return text ? text : null;
+  }
+
+  function isLikelyNoise(text) {
+    return NOISE_PATTERNS.some((pattern) => pattern.test(text));
+  }
+
+  function isPlausibleContentText(text) {
+    if (!text) return false;
+    if (text.length < 3 || text.length > 80) return false;
+    if (isLikelyNoise(text)) return false;
+    if (/^[0-9\s/|:.,-]+$/.test(text)) return false;
+    return true;
+  }
+
+  function scoreTitleText(text, element) {
+    let score = 0;
+
+    if (!isPlausibleContentText(text)) {
+      return -1;
+    }
+
+    score += Math.min(text.length, 40);
+
+    if (/^[A-Z0-9][\w\s'&().,+-]+$/i.test(text)) {
+      score += 10;
+    }
+
+    if (element.matches("h1")) {
+      score += 50;
+    }
+
+    if (element.matches("[class*='title'], [class*='name'], [data-testid*='title']")) {
+      score += 30;
+    }
+
+    if (element.closest("main")) {
+      score += 15;
+    }
+
+    if (element.children.length === 0) {
+      score += 10;
+    }
+
+    if (/^(by|creator\s*:)/i.test(text)) {
+      score -= 40;
+    }
+
+    return score;
+  }
+
+  function findFirstTextCandidate(selectors) {
+    let bestMatch = null;
+
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+
+      for (const element of elements) {
+        const text = getCleanText(element);
+        const score = scoreTitleText(text, element);
+
+        if (score > (bestMatch?.score ?? -1)) {
+          bestMatch = { text, score, element };
+        }
+      }
+    }
+
+    return bestMatch?.score > 0 ? bestMatch : null;
+  }
+
+  function findFirstText(selectors) {
+    return findFirstTextCandidate(selectors)?.text ?? null;
+  }
+
+  function normalizeCandidateName(value) {
+    const text = value?.trim().replace(/\s+/g, " ");
+
+    if (!text || text.length < 3 || text.length > 50) {
+      return null;
+    }
+
+    if (isLikelyNoise(text)) {
+      return null;
+    }
+
+    if (!/^[A-Za-z0-9][A-Za-z0-9 '&().,+-]*$/.test(text)) {
+      return null;
+    }
+
+    return text;
+  }
+
+  function isLikelySimpleName(text) {
+    if (!text) return false;
+
+    if (!/^[A-Z][A-Za-z0-9'&.+-]*(?:\s+[A-Z][A-Za-z0-9'&.+-]*){0,3}$/.test(text)) {
+      return false;
+    }
+
+    return text.length >= 4 && text.length <= 40;
+  }
+
+  function getTitleContainer(titleElement) {
+    if (!titleElement) {
+      return null;
+    }
+
+    return (
+      titleElement.closest("article") ||
+      titleElement.closest("section") ||
+      titleElement.closest("[class*='card']") ||
+      titleElement.closest("[class*='item']") ||
+      titleElement.closest("[class*='container']") ||
+      titleElement.parentElement
+    );
+  }
+
+  function findCreatorTextInElements(elements) {
+    let fallbackName = null;
+
+    for (const element of elements) {
+      const text = getCleanText(element);
+
+      if (!text) continue;
+
+      const byMatch = text.match(/^by\s+(.+)$/i);
+      if (byMatch?.[1]) {
+        const candidate = normalizeCandidateName(byMatch[1]);
+        if (candidate) return candidate;
+      }
+
+      const creatorMatch = text.match(/^creator\s*:\s*(.+)$/i);
+      if (creatorMatch?.[1]) {
+        const candidate = normalizeCandidateName(creatorMatch[1]);
+        if (candidate) return candidate;
+      }
+
+      if (!fallbackName && isLikelySimpleName(text)) {
+        fallbackName = text;
+      }
+    }
+
+    return fallbackName;
+  }
+
+  function findCreatorText(titleElement) {
+    if (!titleElement) {
+      return null;
+    }
+
+    const titleContainer = getTitleContainer(titleElement);
+
+    if (!titleContainer) {
+      return null;
+    }
+
+    const candidateElements = [];
+
+    if (titleElement.nextElementSibling) {
+      candidateElements.push(titleElement.nextElementSibling);
+    }
+
+    if (titleElement.previousElementSibling) {
+      candidateElements.push(titleElement.previousElementSibling);
+    }
+
+    candidateElements.push(titleContainer);
+
+    for (const selector of creatorSelectors) {
+      titleContainer.querySelectorAll(selector).forEach((element) => {
+        candidateElements.push(element);
+      });
+    }
+
+    return findCreatorTextInElements(candidateElements);
+  }
+
+  function detectTypeFromText(text) {
+    if (!text) {
+      return null;
+    }
+
+    if (/\bcaptures?\b/i.test(text) && !/\bpresets?\b/i.test(text)) {
+      return "capture";
+    }
+
+    if (/\bpresets?\b/i.test(text) && !/\bcaptures?\b/i.test(text)) {
+      return "preset";
+    }
+
+    return null;
+  }
+
+  function detectTypeFromPathname(pathname) {
+    if (!pathname) {
+      return null;
+    }
+
+    if (
+      /\/cloud\/(?:[^/]+\/)*presets?(?:\/|$)/i.test(pathname) ||
+      /\/presets?(?:\/|$)/i.test(pathname)
+    ) {
+      return "preset";
+    }
+
+    if (
+      /\/cloud\/(?:[^/]+\/)*captures?(?:\/|$)/i.test(pathname) ||
+      /\/captures?(?:\/|$)/i.test(pathname)
+    ) {
+      return "capture";
+    }
+
+    return null;
+  }
+
+  function findNearbyTypeText(titleText, creatorText) {
+    const anchors = [titleText, creatorText].filter(Boolean);
+
+    for (const anchorText of anchors) {
+      const anchorElements = Array.from(document.querySelectorAll("main *, body *")).filter(
+        (element) => getCleanText(element) === anchorText
+      );
+
+      for (const element of anchorElements) {
+        const candidateElements = [
+          element,
+          element.parentElement,
+          element.closest("article"),
+          element.closest("section"),
+          element.closest("[class*='card']"),
+          element.closest("[class*='item']"),
+          element.closest("[class*='preset']"),
+          element.closest("[class*='capture']")
+        ].filter(Boolean);
+
+        for (const candidateElement of candidateElements) {
+          const candidateText = getCleanText(candidateElement);
+
+          if (!candidateText) continue;
+
+          const candidateType = detectTypeFromText(candidateText);
+          if (candidateType) {
+            return candidateType;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function findItemType(titleText, creatorText) {
+    const pathname = window.location.pathname;
+    const pathnameType = detectTypeFromPathname(pathname);
+    if (pathnameType) {
+      return pathnameType;
+    }
+
+    const titleType = detectTypeFromText(titleText);
+    if (titleType) {
+      return titleType;
+    }
+
+    const nearbyType = findNearbyTypeText(titleText, creatorText);
+    if (nearbyType) {
+      return nearbyType;
+    }
+
+    for (const selector of typeSelectors) {
+      const elements = document.querySelectorAll(selector);
+
+      for (const element of elements) {
+        const text = getCleanText(element);
+
+        if (!text) continue;
+
+        const domType = detectTypeFromText(text);
+        if (domType) {
+          return domType;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function scrapeIdentity() {
+    const titleCandidate = findFirstTextCandidate(titleSelectors);
+    const title = titleCandidate?.text ?? null;
+    const creator = findCreatorText(titleCandidate?.element ?? null);
+    const type = findItemType(title, creator);
+
+    console.log("CortexRate scrape result", { title, creator, type });
+
+    if (!title || !creator || !type) {
+      console.log("CortexRate scrape incomplete, skipping request", {
+        title,
+        creator,
+        type
+      });
+      return null;
+    }
+
+    return { title, creator, type };
+  }
+
+  function buildFingerprint(identity) {
+    return `${identity.type}::${identity.title.toLowerCase()}::${identity.creator.toLowerCase()}`;
+  }
+
+  function isSupportedDetailPage() {
+    const pathname = window.location.pathname;
+    const isPresetDetail = /\/cloud\/(?:[^/]+\/)*preset\/view\/[^/]+/i.test(pathname);
+    const isCaptureDetail = /\/cloud\/(?:[^/]+\/)*capture\/view\/[^/]+/i.test(pathname);
+
+    return isPresetDetail || isCaptureDetail;
+  }
+
+  function resetResolutionStateForUrlChange(nextUrl) {
+    console.log("CortexRate resetting state for URL change", {
+      previousUrl: currentUrl,
+      nextUrl
+    });
+
+    currentUrl = nextUrl;
+    lastResolvedFingerprint = null;
+    pendingFingerprint = null;
+    linkedCanonicalItemId = null;
+    unresolvedObservedIdentityId = null;
+    retryAttempt = 0;
+    lastStableBadgeState = null;
+  }
+
+  function removeBadge() {
+    const badge = document.getElementById(BADGE_ID);
+
+    if (badge) {
+      badge.remove();
+      console.log("CortexRate badge removed on non-detail page");
+    }
+  }
+
+  function openBadgeTarget() {
+    if (linkedCanonicalItemId) {
+      window.open(`${API_BASE_URL}/items/${linkedCanonicalItemId}`, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (unresolvedObservedIdentityId) {
+      window.open(
+        `${API_BASE_URL}/claim/observed/${unresolvedObservedIdentityId}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }
+  }
+
+  function syncBadgeClickableState() {
+    const badge = document.getElementById(BADGE_ID);
+
+    if (!badge) {
+      return;
+    }
+
+    badge.dataset.clickable = linkedCanonicalItemId || unresolvedObservedIdentityId ? "true" : "false";
+  }
+
+  function setBadgeTargetState(canonicalItemId = null, observedIdentityId = null) {
+    linkedCanonicalItemId = canonicalItemId;
+    unresolvedObservedIdentityId = observedIdentityId;
+
+    console.log("CortexRate badge target state updated", {
+      linkedCanonicalItemId,
+      unresolvedObservedIdentityId
+    });
+
+    syncBadgeClickableState();
+  }
+
+  function clearBadgeTargetState() {
+    setBadgeTargetState(null, null);
+  }
+
+  function storeStableBadgeState(fingerprint, text, tone, canonicalItemId = null, observedIdentityId = null) {
+    lastStableBadgeState = {
+      fingerprint,
+      text,
+      tone,
+      canonicalItemId,
+      observedIdentityId
+    };
+
+    console.log("CortexRate stored stable badge state", lastStableBadgeState);
+  }
+
+  function restoreStableBadgeState(fingerprint) {
+    if (!lastStableBadgeState || lastStableBadgeState.fingerprint !== fingerprint) {
+      return false;
+    }
+
+    console.log("CortexRate restoring stable badge state", lastStableBadgeState);
+    setBadgeTargetState(
+      lastStableBadgeState.canonicalItemId,
+      lastStableBadgeState.observedIdentityId
+    );
+    renderBadge(lastStableBadgeState.text, lastStableBadgeState.tone);
+    return true;
+  }
+
+  function setBadgeTargetStateFromResolveResult(result) {
+    if (result?.resolution?.status === "linked" && result.canonical_item?.id) {
+      setBadgeTargetState(result.canonical_item.id, null);
+      return;
+    }
+
+    if (
+      (result?.resolution?.status === "unresolved" ||
+        result?.resolution?.status === "created_unresolved") &&
+      result.observed_identity?.id
+    ) {
+      setBadgeTargetState(null, result.observed_identity.id);
+      return;
+    }
+
+    clearBadgeTargetState();
+  }
+
+  function ensureBadge() {
+    let badge = document.getElementById(BADGE_ID);
+
+    if (badge || !document.body) {
+      return badge;
+    }
+
+    badge = document.createElement("div");
+    badge.id = BADGE_ID;
+    badge.className = "cortexrate-badge";
+    badge.setAttribute("role", "status");
+
+    const title = document.createElement("p");
+    title.className = "cortexrate-badge__title";
+    title.textContent = "CortexRate";
+
+    const body = document.createElement("p");
+    body.className = "cortexrate-badge__body";
+    body.textContent = "Scanning...";
+
+    badge.onclick = () => {
+      console.log("CortexRate badge clicked", {
+        linkedCanonicalItemId,
+        unresolvedObservedIdentityId
+      });
+      openBadgeTarget();
+    };
+
+    badge.appendChild(title);
+    badge.appendChild(body);
+    document.body.appendChild(badge);
+    syncBadgeClickableState();
+
+    return badge;
+  }
+
+  function renderBadge(text, tone = "empty") {
+    const badge = ensureBadge();
+
+    if (!badge) return;
+
+    const body = badge.querySelector(".cortexrate-badge__body");
+    if (body) {
+      body.textContent = text;
+    }
+
+    badge.dataset.tone = tone;
+    syncBadgeClickableState();
+  }
+
+  function formatSummary(result) {
+    if (result.resolution?.status === "linked" && result.rating_summary) {
+      const averageRating = result.rating_summary.average_rating;
+      const reviewCount = result.rating_summary.review_count ?? 0;
+      const reviewLabel = reviewCount === 1 ? "review" : "reviews";
+
+      if (averageRating !== null && averageRating !== undefined) {
+        return `${Number(averageRating).toFixed(2)} / 5 · ${reviewCount} ${reviewLabel}`;
+      }
+    }
+
+    return "No ratings yet";
+  }
+
+  async function resolveIdentity(identity) {
+    console.log("CortexRate sending resolve request", identity);
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/identity/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(identity)
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Identity resolve failed with status ${response.status}: ${text}`);
+    }
+
+    const payload = await response.json();
+    console.log("CortexRate resolve response", payload);
+    return payload.data ?? null;
+  }
+
+  async function run() {
+    scheduledRun = null;
+
+    if (window.location.href !== currentUrl) {
+      resetResolutionStateForUrlChange(window.location.href);
+      clearBadgeTargetState();
+    }
+
+    if (!isSupportedDetailPage()) {
+      console.log("CortexRate skipping non-detail page", {
+        pathname: window.location.pathname
+      });
+      clearBadgeTargetState();
+      removeBadge();
+      return;
+    }
+
+    ensureBadge();
+    renderBadge("Scanning...", "empty");
+
+    const identity = scrapeIdentity();
+
+    if (!identity) {
+      const nextDelay = INITIAL_RETRY_DELAYS_MS[retryAttempt] ?? null;
+
+      console.log("CortexRate waiting for item data", {
+        retryAttempt,
+        nextDelay
+      });
+      renderBadge("Waiting for item data", "empty");
+
+      if (nextDelay !== null) {
+        retryAttempt += 1;
+        scheduleRun(nextDelay);
+      }
+
+      return;
+    }
+
+    retryAttempt = 0;
+
+    const fingerprint = buildFingerprint(identity);
+
+    if (fingerprint === lastResolvedFingerprint || fingerprint === pendingFingerprint) {
+      console.log("CortexRate skipping duplicate fingerprint", fingerprint);
+      restoreStableBadgeState(fingerprint);
+      return;
+    }
+
+    pendingFingerprint = fingerprint;
+    renderBadge("Checking CortexRate...", "empty");
+
+    try {
+      const result = await resolveIdentity(identity);
+
+      if (!result) {
+        clearBadgeTargetState();
+        storeStableBadgeState(fingerprint, "No ratings yet", "empty", null, null);
+        renderBadge("No ratings yet", "empty");
+        return;
+      }
+
+      const summaryText = formatSummary(result);
+      const summaryTone = result.resolution?.status === "linked" ? "linked" : "empty";
+      const canonicalItemId =
+        result.resolution?.status === "linked" ? result.canonical_item?.id ?? null : null;
+      const observedIdentityId =
+        result.resolution?.status === "linked" ? null : result.observed_identity?.id ?? null;
+
+      setBadgeTargetStateFromResolveResult(result);
+      storeStableBadgeState(
+        fingerprint,
+        summaryText,
+        summaryTone,
+        canonicalItemId,
+        observedIdentityId
+      );
+      renderBadge(summaryText, summaryTone);
+
+      lastResolvedFingerprint = fingerprint;
+    } catch (error) {
+      console.error("CortexRate extension error", error);
+      renderBadge("Request failed", "error");
+    } finally {
+      pendingFingerprint = null;
+    }
+  }
+
+  function scheduleRun(delay = RETRY_DELAY_MS) {
+    if (scheduledRun) {
+      window.clearTimeout(scheduledRun);
+    }
+
+    console.log("CortexRate scheduling run", { delay });
+    scheduledRun = window.setTimeout(run, delay);
+  }
+
+  function shouldScheduleObserverRun() {
+    if (pendingFingerprint) {
+      console.log("CortexRate observer skipping while request is pending", {
+        pendingFingerprint
+      });
+      return false;
+    }
+
+    const identity = scrapeIdentity();
+
+    if (!identity) {
+      const nextDelay = INITIAL_RETRY_DELAYS_MS[retryAttempt] ?? null;
+
+      if (nextDelay === null) {
+        console.log("CortexRate observer not scheduling incomplete page beyond retry window");
+        return false;
+      }
+
+      console.log("CortexRate observer scheduling incomplete page retry", {
+        retryAttempt,
+        nextDelay
+      });
+      return true;
+    }
+
+    const fingerprint = buildFingerprint(identity);
+
+    if (lastStableBadgeState?.fingerprint === fingerprint) {
+      console.log("CortexRate observer skipping settled fingerprint", fingerprint);
+      restoreStableBadgeState(fingerprint);
+      return false;
+    }
+
+    console.log("CortexRate observer detected new fingerprint", fingerprint);
+    return true;
+  }
+
+  scheduleRun();
+
+  const observer = new MutationObserver(() => {
+    if (window.location.href !== currentUrl) {
+      resetResolutionStateForUrlChange(window.location.href);
+      clearBadgeTargetState();
+    }
+
+    if (!isSupportedDetailPage()) {
+      console.log("CortexRate observer skipping non-detail page", {
+        pathname: window.location.pathname
+      });
+      clearBadgeTargetState();
+      removeBadge();
+      return;
+    }
+
+    if (!shouldScheduleObserverRun()) {
+      return;
+    }
+
+    scheduleRun();
+  });
+
+  if (document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+})();
