@@ -78,7 +78,7 @@ export function ReviewForm({
     event.preventDefault();
 
     if (!isAuthenticated) {
-      setErrorMessage("Sign in to leave a rating");
+      setErrorMessage("Log in to leave a rating");
       setSuccessMessage(null);
       return;
     }
@@ -207,7 +207,7 @@ export function ReviewForm({
               href={`/login?redirectTo=${encodeURIComponent(pathname || `/items/${canonicalItemId}`)}`}
               style={{ color: "#fafafa", textDecoration: "none", fontWeight: 600 }}
             >
-              Sign in
+              Log in
             </Link>{" "}
             to leave a rating
           </p>

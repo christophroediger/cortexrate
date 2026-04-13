@@ -76,18 +76,18 @@ export default function HomePage() {
               textDecoration: "none"
             }}
           >
-            Sign in to rate
+            Log in to rate
           </Link>
 
           <Link
-            href="/items/3f2504e0-4f89-41d3-9a0c-0305e82c3301"
+            href="/signup"
             style={{
               color: "#a1a1aa",
               fontSize: 14,
               textDecoration: "none"
             }}
           >
-            Open an item page
+            New here? Sign up
           </Link>
         </div>
       </section>

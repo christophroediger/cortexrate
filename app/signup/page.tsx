@@ -1,12 +1,12 @@
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { SignUpForm } from "@/components/auth/sign-up-form";
 
-type LoginPageProps = {
+type SignupPageProps = {
   searchParams: Promise<{
     redirectTo?: string;
   }>;
 };
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function SignupPage({ searchParams }: SignupPageProps) {
   const { redirectTo } = await searchParams;
 
   return (
@@ -61,14 +61,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               color: "#fafafa"
             }}
           >
-            Log in
+            Sign up
           </h1>
           <p style={{ margin: 0, color: "#a1a1aa", fontSize: 15, lineHeight: 1.55 }}>
-            Use your CortexRate account to leave ratings and short notes.
+            Use your email and password to start rating presets and captures.
           </p>
         </div>
 
-        <SignInForm redirectTo={redirectTo || "/"} />
+        <SignUpForm redirectTo={redirectTo || "/"} />
       </section>
     </main>
   );

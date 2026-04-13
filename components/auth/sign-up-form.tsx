@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type SignInFormProps = {
+type SignUpFormProps = {
   redirectTo: string;
 };
 
@@ -14,28 +14,37 @@ type ErrorResponseBody = {
   };
 };
 
-function getErrorMessage(responseBody: ErrorResponseBody | { data?: { redirect_to?: string } }) {
+type SignUpResponseBody = {
+  data?: {
+    status?: "authenticated" | "confirmation_required";
+    redirect_to?: string;
+  };
+};
+
+function getErrorMessage(responseBody: ErrorResponseBody | SignUpResponseBody) {
   if ("error" in responseBody) {
-    return responseBody.error?.message ?? "Log-in failed.";
+    return responseBody.error?.message ?? "Sign-up failed.";
   }
 
-  return "Log-in failed.";
+  return "Sign-up failed.";
 }
 
-export function SignInForm({ redirectTo }: SignInFormProps) {
+export function SignUpForm({ redirectTo }: SignUpFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsPending(true);
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -47,19 +56,22 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
         })
       });
 
-      const responseBody = (await response.json()) as
-        | { data?: { redirect_to?: string } }
-        | ErrorResponseBody;
+      const responseBody = (await response.json()) as SignUpResponseBody | ErrorResponseBody;
 
-      if (!response.ok || !("data" in responseBody)) {
+      if (!response.ok || !("data" in responseBody) || !responseBody.data) {
         setErrorMessage(getErrorMessage(responseBody));
         return;
       }
 
-      router.push(responseBody.data?.redirect_to || "/");
-      router.refresh();
+      if (responseBody.data.status === "authenticated") {
+        router.push(responseBody.data.redirect_to || "/");
+        router.refresh();
+        return;
+      }
+
+      setSuccessMessage("Check your email to finish signing up, then log in.");
     } catch {
-      setErrorMessage("Log-in failed.");
+      setErrorMessage("Sign-up failed.");
     } finally {
       setIsPending(false);
     }
@@ -90,6 +102,7 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
         <input
           type="password"
           required
+          minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           style={{
@@ -117,20 +130,21 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
           justifySelf: "start"
         }}
       >
-        {isPending ? "Logging in..." : "Log in"}
+        {isPending ? "Signing up..." : "Sign up"}
       </button>
 
       <p style={{ margin: 0, color: "#a1a1aa", fontSize: 14 }}>
-        Don't have an account?{" "}
+        Already have an account?{" "}
         <Link
-          href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+          href={`/login?redirectTo=${encodeURIComponent(redirectTo)}`}
           style={{ color: "#fafafa", textDecoration: "none", fontWeight: 600 }}
         >
-          Sign up
+          Log in
         </Link>
       </p>
 
       {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
+      {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
     </form>
   );
 }

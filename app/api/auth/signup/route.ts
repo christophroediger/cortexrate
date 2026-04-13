@@ -6,15 +6,19 @@ import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
 import { env } from "@/lib/env";
 
-const loginRequestSchema = z.object({
+const signupRequestSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1),
+  password: z.string().min(8),
   redirect_to: z.string().optional()
 });
 
-type SupabaseLoginResponse = {
-  access_token: string;
-  refresh_token?: string;
+type SupabaseSignupResponse = {
+  access_token?: string;
+  refresh_token?: string | null;
+  user?: {
+    id: string;
+    email?: string | null;
+  } | null;
 };
 
 export async function POST(request: Request) {
@@ -24,13 +28,13 @@ export async function POST(request: Request) {
     }
 
     const requestBody = await request.json();
-    const parsedBody = loginRequestSchema.safeParse(requestBody);
+    const parsedBody = signupRequestSchema.safeParse(requestBody);
 
     if (!parsedBody.success) {
-      throw new ApiError(400, "BAD_REQUEST", "Invalid log-in request.");
+      throw new ApiError(400, "BAD_REQUEST", "Invalid sign-up request.");
     }
 
-    const response = await fetch(`${env.SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    const response = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,17 +48,28 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      throw new ApiError(401, "UNAUTHORIZED", "Invalid email or password.");
+      throw new ApiError(400, "BAD_REQUEST", "Sign-up could not be completed.");
     }
 
-    const authBody = (await response.json()) as SupabaseLoginResponse;
+    const authBody = (await response.json()) as SupabaseSignupResponse;
     const nextResponse = NextResponse.json({
-      data: {
-        redirect_to: parsedBody.data.redirect_to || "/"
-      }
+      data: authBody.access_token
+        ? {
+            status: "authenticated",
+            redirect_to: parsedBody.data.redirect_to || "/"
+          }
+        : {
+            status: "confirmation_required",
+            redirect_to: "/login"
+          }
     });
 
-    setAuthCookies(nextResponse, authBody);
+    if (authBody.access_token) {
+      setAuthCookies(nextResponse, {
+        access_token: authBody.access_token,
+        refresh_token: authBody.refresh_token
+      });
+    }
 
     return nextResponse;
   } catch (error) {
