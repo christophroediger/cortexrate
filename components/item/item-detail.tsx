@@ -41,7 +41,7 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
             fontSize: 13,
             fontWeight: 700,
             letterSpacing: "0.02em",
-            color: "#6b7280"
+            color: "rgba(244, 244, 245, 0.58)"
           }}
         >
           {formatItemType(canonicalItem.type)}
@@ -52,7 +52,7 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
             fontSize: 42,
             lineHeight: 1.04,
             letterSpacing: "-0.03em",
-            color: "#111827"
+            color: "#fafafa"
           }}
         >
           {canonicalItem.preferred_title ?? "Untitled item"}
@@ -60,7 +60,7 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
         <p
           style={{
             margin: 0,
-            color: "#4b5563",
+            color: "rgba(244, 244, 245, 0.72)",
             fontSize: 18,
             lineHeight: 1.4
           }}
@@ -78,8 +78,8 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
         <p
           style={{
             margin: 0,
-            fontSize: 26,
-            letterSpacing: "0.12em",
+            fontSize: 34,
+            letterSpacing: "0.14em",
             fontWeight: 700,
             color: "#f59e0b"
           }}
@@ -90,7 +90,7 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
           <p
             style={{
               margin: 0,
-              color: "#111827",
+              color: "#fafafa",
               fontSize: 18,
               fontWeight: 600
             }}
@@ -100,7 +100,7 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
           <p
             style={{
               margin: 0,
-              color: "#6b7280",
+              color: "rgba(244, 244, 245, 0.55)",
               fontSize: 15
             }}
           >
@@ -110,12 +110,6 @@ export function ItemDetail({ canonicalItem, ratingSummary }: ItemDetailProps) {
         </div>
       </div>
 
-      <div
-        style={{
-          height: 1,
-          backgroundColor: "#e5e7eb"
-        }}
-      />
     </section>
   );
 }

@@ -109,12 +109,12 @@ export function ReviewForm({
   return (
     <section
       style={{
-        borderTop: "1px solid #e5e7eb",
-        paddingTop: 24
+        display: "grid",
+        gap: 10
       }}
     >
-      <h2 style={{ margin: 0, fontSize: 24, color: "#111827" }}>How does it sound?</h2>
-      <p style={{ margin: "10px 0 0", color: "#6b7280", lineHeight: 1.5 }}>
+      <h2 style={{ margin: 0, fontSize: 24, color: "#fafafa" }}>How does it sound?</h2>
+      <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5 }}>
         Leave a quick rating and, if you like, a short note for other players.
       </p>
       <form
@@ -142,14 +142,14 @@ export function ReviewForm({
                 onMouseEnter={() => setHoverRating(value)}
               />
             ))}
-            <span style={{ marginLeft: 10, color: "#6b7280", fontSize: 14 }}>
+            <span style={{ marginLeft: 10, color: "#a1a1aa", fontSize: 14 }}>
               {hoverRating ?? rating} / 5
             </span>
           </div>
         </label>
 
         <label style={{ display: "grid", gap: 8 }}>
-          <span style={{ fontWeight: 600, color: "#374151" }}>Add a short note (optional)</span>
+          <span style={{ fontWeight: 600, color: "#d4d4d8" }}>Add a short note (optional)</span>
           <textarea
             value={reviewText}
             onChange={(event) => setReviewText(event.target.value)}
@@ -159,12 +159,12 @@ export function ReviewForm({
             disabled={isPending}
             style={{
               padding: 12,
-              borderRadius: 12,
-              border: "1px solid #d1d5db",
+              borderRadius: 16,
+              border: "1px solid rgba(244, 244, 245, 0.1)",
               resize: "vertical",
               font: "inherit",
-              color: "#111827",
-              backgroundColor: "#ffffff"
+              color: "#fafafa",
+              backgroundColor: "rgba(255, 255, 255, 0.03)"
             }}
           />
         </label>
@@ -176,8 +176,8 @@ export function ReviewForm({
             padding: "12px 18px",
             borderRadius: 999,
             border: "none",
-            backgroundColor: isPending ? "#9ca3af" : "#111827",
-            color: "#ffffff",
+            backgroundColor: isPending ? "#52525b" : "#fafafa",
+            color: "#111827",
             fontWeight: 600,
             cursor: isPending ? "default" : "pointer",
             justifySelf: "start"
@@ -186,8 +186,8 @@ export function ReviewForm({
           {isPending ? "Saving..." : "Save rating"}
         </button>
 
-        {errorMessage ? <p style={{ margin: 0, color: "#b91c1c" }}>{errorMessage}</p> : null}
-        {successMessage ? <p style={{ margin: 0, color: "#15803d" }}>{successMessage}</p> : null}
+        {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
+        {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
       </form>
     </section>
   );

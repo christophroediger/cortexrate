@@ -39,7 +39,8 @@ export default async function ItemPage({ params }: ItemPageProps) {
       <main
         style={{
           minHeight: "100vh",
-          backgroundColor: "#fcfcfb",
+          background:
+            "radial-gradient(circle at top, rgba(63, 63, 70, 0.28), transparent 42%), #09090b",
           padding: "56px 20px"
         }}
       >
@@ -47,6 +48,12 @@ export default async function ItemPage({ params }: ItemPageProps) {
           style={{
             maxWidth: 760,
             margin: "0 auto",
+            borderRadius: 28,
+            padding: "28px 24px 32px",
+            background: "rgba(24, 24, 27, 0.92)",
+            border: "1px solid rgba(244, 244, 245, 0.08)",
+            boxShadow: "0 24px 80px rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(16px)",
             display: "grid",
             gap: 28
           }}
@@ -65,14 +72,14 @@ export default async function ItemPage({ params }: ItemPageProps) {
           ) : (
             <section
               style={{
-                borderTop: "1px solid #e5e7eb",
-                paddingTop: 24
+                display: "grid",
+                gap: 10
               }}
             >
-              <h2 style={{ margin: 0, fontSize: 24, color: "#111827" }}>
-                How does it sound to you?
+              <h2 style={{ margin: 0, fontSize: 24, color: "#fafafa" }}>
+                How does it sound?
               </h2>
-              <p style={{ margin: "12px 0 0", color: "#6b7280" }}>
+              <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5 }}>
                 Sign in to leave a rating and a short note.
               </p>
             </section>
