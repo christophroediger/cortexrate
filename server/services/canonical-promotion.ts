@@ -15,6 +15,32 @@ export type PromoteCanonicalItemResult = {
   wasCreated: boolean;
 };
 
+export async function ensureCanonicalItemForObservedIdentity(observedIdentityId: string) {
+  const observedIdentity = await findObservedIdentityById(observedIdentityId);
+
+  if (!observedIdentity) {
+    throw new ApiError(404, "NOT_FOUND", "Observed identity was not found.");
+  }
+
+  if (observedIdentity.canonicalItem) {
+    return {
+      canonicalItem: observedIdentity.canonicalItem,
+      linkedObservedIdentity: {
+        id: observedIdentity.id,
+        canonical_item_id: observedIdentity.canonicalItem.id
+      }
+    };
+  }
+
+  const promotionResult = await promoteObservedIdentityToCanonical(observedIdentityId);
+
+  if (!promotionResult) {
+    throw new ApiError(500, "INTERNAL_ERROR", "Canonical promotion did not return a result.");
+  }
+
+  return promotionResult;
+}
+
 export async function promoteCanonicalItem(
   input: PromoteCanonicalItemInput
 ): Promise<PromoteCanonicalItemResult> {
