@@ -5,7 +5,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().trim().optional().default(""),
   SUPABASE_ANON_KEY: z.string().trim().optional().default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().trim().optional().default(""),
-  DEV_AUTH_ENABLED: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
+  DEV_AUTH_ENABLED: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
   DEV_AUTH_USER_ID: z.string().trim().optional().default("dev-user-1"),
   DEV_AUTH_USER_EMAIL: z.string().email().optional().default("dev@example.com"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development")

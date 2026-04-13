@@ -68,27 +68,12 @@ export default async function ItemPage({ params }: ItemPageProps) {
             ratingSummary={itemResponse.rating_summary}
           />
 
-          {authContext ? (
-            <ReviewForm
-              canonicalItemId={canonicalItemId}
-              initialRating={currentUserReview?.rating ?? 5}
-              initialReviewText={currentUserReview?.review_text ?? ""}
-            />
-          ) : (
-            <section
-              style={{
-                display: "grid",
-                gap: 8
-              }}
-            >
-              <h2 style={{ margin: 0, fontSize: 22, color: "#fafafa", fontWeight: 700 }}>
-                How does it sound?
-              </h2>
-              <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5, fontSize: 15 }}>
-                Sign in to leave a rating and a short note.
-              </p>
-            </section>
-          )}
+          <ReviewForm
+            canonicalItemId={canonicalItemId}
+            isAuthenticated={Boolean(authContext)}
+            initialRating={currentUserReview?.rating ?? 5}
+            initialReviewText={currentUserReview?.review_text ?? ""}
+          />
 
           <ReviewList reviews={reviewsResponse.reviews} />
         </div>

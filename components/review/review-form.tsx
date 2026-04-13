@@ -1,12 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
 type ReviewFormProps = {
   canonicalItemId: string;
   initialRating?: number;
   initialReviewText?: string | null;
+  isAuthenticated: boolean;
 };
 
 type ErrorResponseBody = {
@@ -54,10 +56,12 @@ function StarButton({
 
 export function ReviewForm({
   canonicalItemId,
+  isAuthenticated,
   initialRating = 5,
   initialReviewText = ""
 }: ReviewFormProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [rating, setRating] = useState(initialRating);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [reviewText, setReviewText] = useState(initialReviewText ?? "");
@@ -72,6 +76,13 @@ export function ReviewForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!isAuthenticated) {
+      setErrorMessage("Sign in to leave a rating");
+      setSuccessMessage(null);
+      return;
+    }
+
     setIsPending(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -175,21 +186,32 @@ export function ReviewForm({
 
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !isAuthenticated}
           style={{
             padding: "11px 16px",
             borderRadius: 999,
             border: "none",
-            backgroundColor: isPending ? "#3f3f46" : "#fafafa",
-            color: "#18181b",
+            backgroundColor: isPending || !isAuthenticated ? "#3f3f46" : "#fafafa",
+            color: isPending || !isAuthenticated ? "#d4d4d8" : "#18181b",
             fontWeight: 600,
-            cursor: isPending ? "default" : "pointer",
+            cursor: isPending || !isAuthenticated ? "default" : "pointer",
             justifySelf: "start"
           }}
         >
           {isPending ? "Saving..." : "Save rating"}
         </button>
 
+        {!isAuthenticated ? (
+          <p style={{ margin: 0, color: "#a1a1aa", fontSize: 14 }}>
+            <Link
+              href={`/login?redirectTo=${encodeURIComponent(pathname || `/items/${canonicalItemId}`)}`}
+              style={{ color: "#fafafa", textDecoration: "none", fontWeight: 600 }}
+            >
+              Sign in
+            </Link>{" "}
+            to leave a rating
+          </p>
+        ) : null}
         {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
         {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
       </form>

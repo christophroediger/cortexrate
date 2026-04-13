@@ -1,6 +1,14 @@
-import Link from "next/link";
+import { SignInForm } from "@/components/auth/sign-in-form";
 
-export default function HomePage() {
+type LoginPageProps = {
+  searchParams: Promise<{
+    redirectTo?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { redirectTo } = await searchParams;
+
   return (
     <main
       style={{
@@ -18,7 +26,7 @@ export default function HomePage() {
       <section
         style={{
           width: "100%",
-          maxWidth: 560,
+          maxWidth: 520,
           borderRadius: 24,
           padding: "28px 24px",
           background:
@@ -43,53 +51,24 @@ export default function HomePage() {
         >
           CortexRate
         </p>
-
-        <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid", gap: 8 }}>
           <h1
             style={{
               margin: 0,
-              fontSize: 38,
-              lineHeight: 1.05,
+              fontSize: 34,
+              lineHeight: 1.06,
               letterSpacing: "-0.03em",
               color: "#fafafa"
             }}
           >
-            Rate presets and captures
+            Sign in to rate
           </h1>
-          <p style={{ margin: 0, color: "#a1a1aa", fontSize: 16, lineHeight: 1.55 }}>
-            Quickly see what sounds good. Leave your own rating in seconds.
+          <p style={{ margin: 0, color: "#a1a1aa", fontSize: 15, lineHeight: 1.55 }}>
+            Use your CortexRate account to leave ratings and short notes.
           </p>
         </div>
 
-        <div style={{ display: "grid", gap: 12, justifyItems: "start" }}>
-          <Link
-            href="/login"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "12px 18px",
-              borderRadius: 999,
-              backgroundColor: "#fafafa",
-              color: "#18181b",
-              fontWeight: 700,
-              textDecoration: "none"
-            }}
-          >
-            Sign in to rate
-          </Link>
-
-          <Link
-            href="/items/3f2504e0-4f89-41d3-9a0c-0305e82c3301"
-            style={{
-              color: "#a1a1aa",
-              fontSize: 14,
-              textDecoration: "none"
-            }}
-          >
-            Open an item page
-          </Link>
-        </div>
+        <SignInForm redirectTo={redirectTo || "/"} />
       </section>
     </main>
   );
