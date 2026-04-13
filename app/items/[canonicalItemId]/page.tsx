@@ -39,23 +39,28 @@ export default async function ItemPage({ params }: ItemPageProps) {
       <main
         style={{
           minHeight: "100vh",
+          margin: 0,
           background:
-            "radial-gradient(circle at top, rgba(63, 63, 70, 0.28), transparent 42%), #09090b",
-          padding: "56px 20px"
+            "radial-gradient(circle at top, rgba(82, 82, 91, 0.16), transparent 36%), #09090b",
+          padding: "32px 20px 40px",
+          fontFamily:
+            'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
         }}
       >
         <div
           style={{
-            maxWidth: 760,
+            maxWidth: 740,
             margin: "0 auto",
-            borderRadius: 28,
-            padding: "28px 24px 32px",
-            background: "rgba(24, 24, 27, 0.92)",
-            border: "1px solid rgba(244, 244, 245, 0.08)",
-            boxShadow: "0 24px 80px rgba(0, 0, 0, 0.45)",
-            backdropFilter: "blur(16px)",
+            borderRadius: 24,
+            padding: "24px 22px 26px",
+            background:
+              "linear-gradient(180deg, rgba(39, 39, 42, 0.92), rgba(24, 24, 27, 0.94))",
+            border: "1px solid rgba(244, 244, 245, 0.07)",
+            boxShadow:
+              "0 18px 50px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.03)",
+            backdropFilter: "blur(14px)",
             display: "grid",
-            gap: 28
+            gap: 24
           }}
         >
           <ItemDetail
@@ -73,13 +78,13 @@ export default async function ItemPage({ params }: ItemPageProps) {
             <section
               style={{
                 display: "grid",
-                gap: 10
+                gap: 8
               }}
             >
-              <h2 style={{ margin: 0, fontSize: 24, color: "#fafafa" }}>
+              <h2 style={{ margin: 0, fontSize: 22, color: "#fafafa", fontWeight: 700 }}>
                 How does it sound?
               </h2>
-              <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5 }}>
+              <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5, fontSize: 15 }}>
                 Sign in to leave a rating and a short note.
               </p>
             </section>

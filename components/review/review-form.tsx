@@ -39,10 +39,10 @@ function StarButton({
         border: "none",
         background: "transparent",
         padding: 0,
-        fontSize: 32,
+        fontSize: 30,
         lineHeight: 1,
         cursor: disabled ? "default" : "pointer",
-        color: filled ? "#f59e0b" : "#d1d5db",
+        color: filled ? "#f59e0b" : "rgba(228, 228, 231, 0.42)",
         transform: active ? "scale(1.08)" : "scale(1)",
         transition: "transform 120ms ease, color 120ms ease"
       }}
@@ -110,26 +110,27 @@ export function ReviewForm({
     <section
       style={{
         display: "grid",
-        gap: 10
+        gap: 8
       }}
     >
-      <h2 style={{ margin: 0, fontSize: 24, color: "#fafafa" }}>How does it sound?</h2>
-      <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5 }}>
+      <h2 style={{ margin: 0, fontSize: 22, color: "#fafafa", fontWeight: 700 }}>How does it sound?</h2>
+      <p style={{ margin: 0, color: "#a1a1aa", lineHeight: 1.5, fontSize: 15 }}>
         Leave a quick rating and, if you like, a short note for other players.
       </p>
       <form
         onSubmit={handleSubmit}
-        style={{ display: "grid", gap: 18, marginTop: 18 }}
+        style={{ display: "grid", gap: 14, marginTop: 10 }}
         onMouseLeave={() => setHoverRating(null)}
       >
-        <label style={{ display: "grid", gap: 8 }}>
+        <label style={{ display: "grid", gap: 6 }}>
           <div
             role="radiogroup"
             aria-label="Choose a rating"
             style={{
               display: "flex",
               gap: 6,
-              alignItems: "center"
+              alignItems: "center",
+              flexWrap: "wrap"
             }}
           >
             {[1, 2, 3, 4, 5].map((value) => (
@@ -142,14 +143,16 @@ export function ReviewForm({
                 onMouseEnter={() => setHoverRating(value)}
               />
             ))}
-            <span style={{ marginLeft: 10, color: "#a1a1aa", fontSize: 14 }}>
+            <span style={{ marginLeft: 10, color: "#71717a", fontSize: 13 }}>
               {hoverRating ?? rating} / 5
             </span>
           </div>
         </label>
 
         <label style={{ display: "grid", gap: 8 }}>
-          <span style={{ fontWeight: 600, color: "#d4d4d8" }}>Add a short note (optional)</span>
+          <span style={{ fontWeight: 600, color: "#d4d4d8", fontSize: 14 }}>
+            Add a short note (optional)
+          </span>
           <textarea
             value={reviewText}
             onChange={(event) => setReviewText(event.target.value)}
@@ -158,13 +161,14 @@ export function ReviewForm({
             placeholder="What stands out to you?"
             disabled={isPending}
             style={{
-              padding: 12,
-              borderRadius: 16,
-              border: "1px solid rgba(244, 244, 245, 0.1)",
+              padding: "12px 14px",
+              borderRadius: 14,
+              border: "1px solid rgba(244, 244, 245, 0.08)",
               resize: "vertical",
               font: "inherit",
               color: "#fafafa",
-              backgroundColor: "rgba(255, 255, 255, 0.03)"
+              backgroundColor: "rgba(255, 255, 255, 0.025)",
+              minHeight: 112
             }}
           />
         </label>
@@ -173,11 +177,11 @@ export function ReviewForm({
           type="submit"
           disabled={isPending}
           style={{
-            padding: "12px 18px",
+            padding: "11px 16px",
             borderRadius: 999,
             border: "none",
-            backgroundColor: isPending ? "#52525b" : "#fafafa",
-            color: "#111827",
+            backgroundColor: isPending ? "#3f3f46" : "#fafafa",
+            color: "#18181b",
             fontWeight: 600,
             cursor: isPending ? "default" : "pointer",
             justifySelf: "start"
