@@ -7,6 +7,7 @@ export type AuthContext = {
   userId: string;
   email: string | null;
   isDevAuth: boolean;
+  source: "supabase_cookie" | "dev_fallback";
 };
 
 type SupabaseUserResponse = {
@@ -46,7 +47,8 @@ async function getSupabaseAuthContextFromCookie(): Promise<AuthContext | null> {
   return {
     userId: user.id,
     email: user.email ?? null,
-    isDevAuth: false
+    isDevAuth: false,
+    source: "supabase_cookie"
   };
 }
 
@@ -61,11 +63,12 @@ export async function getAuthContext(): Promise<AuthContext | null> {
   const developmentUserId = requestHeaders.get("x-dev-user-id");
   const developmentEmail = requestHeaders.get("x-dev-user-email");
 
-  if (env.DEV_AUTH_ENABLED) {
+  if (env.DEV_AUTH_ENABLED && env.NODE_ENV !== "production") {
     return {
       userId: developmentUserId ?? env.DEV_AUTH_USER_ID,
       email: developmentEmail ?? env.DEV_AUTH_USER_EMAIL,
-      isDevAuth: true
+      isDevAuth: true,
+      source: "dev_fallback"
     };
   }
 

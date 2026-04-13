@@ -66,6 +66,10 @@ export async function GET(request: Request, context: RouteContext) {
 export async function POST(request: Request, context: RouteContext) {
   try {
     const authContext = await requireAuthContext();
+    console.info("CortexRate review submit auth", {
+      userId: authContext.userId,
+      authSource: authContext.source
+    });
     const canonicalItemId = await parseCanonicalItemId(context);
     const requestBody = await request.json();
     const parsedBody = upsertReviewRequestSchema.safeParse(requestBody);
