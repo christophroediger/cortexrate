@@ -38,10 +38,10 @@
     "[class*='author']",
     "[class*='artist']",
     "[class*='name']",
-    "main p",
-    "main span",
-    "main div",
-    "main *"
+    "a",
+    "p",
+    "span",
+    "div"
   ];
 
   const typeSelectors = [
@@ -74,6 +74,19 @@
     /\bcortexrate\b/i
   ];
 
+  const NON_CREATOR_PATTERNS = [
+    /\bdownload(?:ed)?\b/i,
+    /\bshare\b/i,
+    /\bcapture type\b/i,
+    /\bpreferred instrument\b/i,
+    /\bgain\b/i,
+    /\bcreated on\b/i,
+    /\bupdated on\b/i,
+    /\bamp\b/i,
+    /\bguitar\b/i,
+    /\bbass\b/i
+  ];
+
   function isVisible(element) {
     if (!element) return false;
 
@@ -92,6 +105,16 @@
 
   function isLikelyNoise(text) {
     return NOISE_PATTERNS.some((pattern) => pattern.test(text));
+  }
+
+  function isBlockedCreatorLabel(text) {
+    const collapsed = text.toLowerCase().replace(/\s+/g, "");
+
+    return (
+      NON_CREATOR_PATTERNS.some((pattern) => pattern.test(text)) ||
+      collapsed.includes("download") ||
+      collapsed.includes("share")
+    );
   }
 
   function isPlausibleContentText(text) {
@@ -172,6 +195,10 @@
       return null;
     }
 
+    if (isBlockedCreatorLabel(text)) {
+      return null;
+    }
+
     if (!/^[A-Za-z0-9][A-Za-z0-9 '&().,+-]*$/.test(text)) {
       return null;
     }
@@ -187,6 +214,84 @@
     }
 
     return text.length >= 4 && text.length <= 40;
+  }
+
+  function isLikelyGearModelLabel(text) {
+    if (!text) return false;
+
+    const normalized = text.startsWith("@") ? text.slice(1) : text;
+
+    if (normalized.includes(" ")) {
+      return false;
+    }
+
+    return (
+      normalized.length >= 3 &&
+      normalized.length <= 16 &&
+      /^[A-Z0-9-]+$/.test(normalized) &&
+      /[0-9]/.test(normalized)
+    );
+  }
+
+  function isLikelyProfileName(text) {
+    if (!text) return false;
+
+    const normalized = text.startsWith("@") ? text.slice(1) : text;
+
+    if (normalized.length < 6 || normalized.length > 40) {
+      return false;
+    }
+
+    if (normalized.includes(" ")) {
+      return false;
+    }
+
+    if (!/^[A-Za-z][A-Za-z0-9.-]*$/.test(normalized)) {
+      return false;
+    }
+
+    if (isBlockedCreatorLabel(normalized) || isLikelyGearModelLabel(normalized)) {
+      return false;
+    }
+
+    return /^[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]+)+$/.test(normalized);
+  }
+
+  function isLikelyHandleName(text) {
+    if (!text) return false;
+
+    const normalized = text.startsWith("@") ? text.slice(1) : text;
+    const excludedValues = new Set([
+      "amp",
+      "capture",
+      "preset",
+      "guitar",
+      "bass",
+      "downloaded",
+      "share"
+    ]);
+
+    if (normalized.length < 3 || normalized.length > 32) {
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9._-]+$/.test(normalized)) {
+      return false;
+    }
+
+    if (!/[A-Za-z]/.test(normalized)) {
+      return false;
+    }
+
+    if (excludedValues.has(normalized.toLowerCase())) {
+      return false;
+    }
+
+    if (isLikelyGearModelLabel(normalized)) {
+      return false;
+    }
+
+    return /[0-9._-]/.test(normalized) || /^[a-z]/.test(normalized);
   }
 
   function getTitleContainer(titleElement) {
@@ -206,6 +311,8 @@
 
   function findCreatorTextInElements(elements) {
     let fallbackName = null;
+    let fallbackProfileName = null;
+    let fallbackHandle = null;
 
     for (const element of elements) {
       const text = getCleanText(element);
@@ -224,12 +331,65 @@
         if (candidate) return candidate;
       }
 
-      if (!fallbackName && isLikelySimpleName(text)) {
-        fallbackName = text;
+      const normalizedText = normalizeCandidateName(text);
+
+      if (!fallbackProfileName && normalizedText && isLikelyProfileName(normalizedText)) {
+        fallbackProfileName = normalizedText;
+      }
+
+      if (!fallbackHandle && normalizedText && isLikelyHandleName(normalizedText)) {
+        fallbackHandle = normalizedText;
+      }
+
+      if (!fallbackName && normalizedText && isLikelySimpleName(normalizedText)) {
+        fallbackName = normalizedText;
       }
     }
 
-    return fallbackName;
+    return fallbackProfileName ?? fallbackHandle ?? fallbackName;
+  }
+
+  function findCreatorTextDirectlyBelowTitle(titleElement, titleBlock) {
+    const candidateElements = [];
+    const seenElements = new Set();
+
+    function pushCandidate(element) {
+      if (!element || seenElements.has(element)) {
+        return;
+      }
+
+      seenElements.add(element);
+      candidateElements.push(element);
+    }
+
+    if (titleElement.nextElementSibling) {
+      pushCandidate(titleElement.nextElementSibling);
+
+      for (const selector of creatorSelectors) {
+        titleElement.nextElementSibling.querySelectorAll(selector).forEach((element) => {
+          pushCandidate(element);
+        });
+      }
+    }
+
+    if (titleBlock) {
+      const children = Array.from(titleBlock.children);
+      const titleIndex = children.indexOf(titleElement);
+
+      if (titleIndex >= 0) {
+        children.slice(titleIndex + 1).forEach((child) => {
+          pushCandidate(child);
+
+          for (const selector of creatorSelectors) {
+            child.querySelectorAll(selector).forEach((element) => {
+              pushCandidate(element);
+            });
+          }
+        });
+      }
+    }
+
+    return findCreatorTextInElements(candidateElements);
   }
 
   function findCreatorText(titleElement) {
@@ -237,27 +397,54 @@
       return null;
     }
 
+    const titleBlock = titleElement.parentElement;
     const titleContainer = getTitleContainer(titleElement);
 
     if (!titleContainer) {
       return null;
     }
 
-    const candidateElements = [];
+    const directCreator = findCreatorTextDirectlyBelowTitle(titleElement, titleBlock);
 
-    if (titleElement.nextElementSibling) {
-      candidateElements.push(titleElement.nextElementSibling);
+    if (directCreator) {
+      return directCreator;
+    }
+
+    const candidateElements = [];
+    const seenElements = new Set();
+
+    function pushCandidate(element) {
+      if (!element || seenElements.has(element)) {
+        return;
+      }
+
+      seenElements.add(element);
+      candidateElements.push(element);
     }
 
     if (titleElement.previousElementSibling) {
-      candidateElements.push(titleElement.previousElementSibling);
+      pushCandidate(titleElement.previousElementSibling);
     }
 
-    candidateElements.push(titleContainer);
+    if (titleBlock) {
+      for (const selector of creatorSelectors) {
+        titleBlock.querySelectorAll(selector).forEach((element) => {
+          pushCandidate(element);
+        });
+      }
+    }
+
+    if (titleBlock?.nextElementSibling) {
+      pushCandidate(titleBlock.nextElementSibling);
+    }
+
+    if (titleBlock?.previousElementSibling) {
+      pushCandidate(titleBlock.previousElementSibling);
+    }
 
     for (const selector of creatorSelectors) {
       titleContainer.querySelectorAll(selector).forEach((element) => {
-        candidateElements.push(element);
+        pushCandidate(element);
       });
     }
 
@@ -283,6 +470,10 @@
   function detectTypeFromPathname(pathname) {
     if (!pathname) {
       return null;
+    }
+
+    if (/\/cloud\/(?:[^/]+\/)*neural-capture\/view\/[^/]+/i.test(pathname)) {
+      return "capture";
     }
 
     if (
@@ -400,7 +591,9 @@
   function isSupportedDetailPage() {
     const pathname = window.location.pathname;
     const isPresetDetail = /\/cloud\/(?:[^/]+\/)*preset\/view\/[^/]+/i.test(pathname);
-    const isCaptureDetail = /\/cloud\/(?:[^/]+\/)*capture\/view\/[^/]+/i.test(pathname);
+    const isCaptureDetail =
+      /\/cloud\/(?:[^/]+\/)*capture\/view\/[^/]+/i.test(pathname) ||
+      /\/cloud\/(?:[^/]+\/)*neural-capture\/view\/[^/]+/i.test(pathname);
 
     return isPresetDetail || isCaptureDetail;
   }
@@ -429,6 +622,44 @@
     }
   }
 
+  function isCortexRateOwnedNode(node) {
+    if (!node) {
+      return false;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      return isCortexRateOwnedNode(node.parentElement);
+    }
+
+    if (!(node instanceof Element)) {
+      return false;
+    }
+
+    return node.id === BADGE_ID || Boolean(node.closest(`#${BADGE_ID}`));
+  }
+
+  function isCortexRateOwnedMutation(mutation) {
+    if (mutation.type === "characterData") {
+      return isCortexRateOwnedNode(mutation.target);
+    }
+
+    if (mutation.type === "attributes") {
+      return isCortexRateOwnedNode(mutation.target);
+    }
+
+    const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+
+    if (!changedNodes.length) {
+      return isCortexRateOwnedNode(mutation.target);
+    }
+
+    return changedNodes.every((node) => isCortexRateOwnedNode(node));
+  }
+
+  function shouldIgnoreObserverMutations(mutations) {
+    return mutations.length > 0 && mutations.every((mutation) => isCortexRateOwnedMutation(mutation));
+  }
+
   function openBadgeTarget() {
     if (linkedCanonicalItemId) {
       window.open(`${API_BASE_URL}/items/${linkedCanonicalItemId}`, "_blank", "noopener,noreferrer");
@@ -441,6 +672,23 @@
         "_blank",
         "noopener,noreferrer"
       );
+    }
+  }
+
+  function consumeBadgeInteraction(event, shouldOpenTarget = false) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+
+    if (shouldOpenTarget) {
+      console.log("CortexRate badge clicked", {
+        linkedCanonicalItemId,
+        unresolvedObservedIdentityId
+      });
+      openBadgeTarget();
     }
   }
 
@@ -534,13 +782,21 @@
     body.className = "cortexrate-badge__body";
     body.textContent = "Scanning...";
 
-    badge.onclick = () => {
-      console.log("CortexRate badge clicked", {
-        linkedCanonicalItemId,
-        unresolvedObservedIdentityId
-      });
-      openBadgeTarget();
-    };
+    badge.addEventListener("pointerdown", (event) => {
+      consumeBadgeInteraction(event);
+    });
+
+    badge.addEventListener("mousedown", (event) => {
+      consumeBadgeInteraction(event);
+    });
+
+    badge.addEventListener("mouseup", (event) => {
+      consumeBadgeInteraction(event);
+    });
+
+    badge.addEventListener("click", (event) => {
+      consumeBadgeInteraction(event, true);
+    });
 
     badge.appendChild(title);
     badge.appendChild(body);
@@ -571,7 +827,9 @@
       const reviewLabel = reviewCount === 1 ? "review" : "reviews";
 
       if (averageRating !== null && averageRating !== undefined) {
-        return `${Number(averageRating).toFixed(2)} / 5 · ${reviewCount} ${reviewLabel}`;
+        const roundedStars = Math.round(averageRating);
+        const stars = "★".repeat(roundedStars) + "☆".repeat(5 - roundedStars);
+        return `${stars} (${Number(averageRating).toFixed(1)}) · ${reviewCount} ${reviewLabel}`;
       }
     }
 
@@ -617,7 +875,6 @@
     }
 
     ensureBadge();
-    renderBadge("Scanning...", "empty");
 
     const identity = scrapeIdentity();
 
@@ -641,6 +898,18 @@
     retryAttempt = 0;
 
     const fingerprint = buildFingerprint(identity);
+
+    if (fingerprint === lastResolvedFingerprint) {
+      console.log("CortexRate run skipping already-settled fingerprint", fingerprint);
+      return;
+    }
+
+    if (lastStableBadgeState?.fingerprint === fingerprint) {
+      console.log("CortexRate run restoring settled fingerprint", fingerprint);
+      restoreStableBadgeState(fingerprint);
+      lastResolvedFingerprint = fingerprint;
+      return;
+    }
 
     if (fingerprint === lastResolvedFingerprint || fingerprint === pendingFingerprint) {
       console.log("CortexRate skipping duplicate fingerprint", fingerprint);
@@ -723,9 +992,15 @@
 
     const fingerprint = buildFingerprint(identity);
 
+    if (fingerprint === lastResolvedFingerprint) {
+      console.log("CortexRate observer skipping already-settled fingerprint", fingerprint);
+      return false;
+    }
+
     if (lastStableBadgeState?.fingerprint === fingerprint) {
       console.log("CortexRate observer skipping settled fingerprint", fingerprint);
       restoreStableBadgeState(fingerprint);
+      lastResolvedFingerprint = fingerprint;
       return false;
     }
 
@@ -735,7 +1010,11 @@
 
   scheduleRun();
 
-  const observer = new MutationObserver(() => {
+  const observer = new MutationObserver((mutations) => {
+    if (shouldIgnoreObserverMutations(mutations)) {
+      return;
+    }
+
     if (window.location.href !== currentUrl) {
       resetResolutionStateForUrlChange(window.location.href);
       clearBadgeTargetState();

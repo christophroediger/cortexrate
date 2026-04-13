@@ -5,11 +5,15 @@ type ReviewListProps = {
 };
 
 function formatReviewDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric"
   }).format(new Date(value));
+}
+
+function renderStars(rating: number) {
+  return "★".repeat(rating) + "☆".repeat(5 - rating);
 }
 
 export function ReviewList({ reviews }: ReviewListProps) {
@@ -17,14 +21,13 @@ export function ReviewList({ reviews }: ReviewListProps) {
     return (
       <section
         style={{
-          border: "1px solid #d4d4d8",
-          borderRadius: 12,
-          padding: 24,
-          backgroundColor: "#ffffff"
+          borderTop: "1px solid #e5e7eb",
+          paddingTop: 24
         }}
       >
-        <h2 style={{ marginTop: 0 }}>Reviews</h2>
-        <p style={{ marginBottom: 0, color: "#52525b" }}>No active reviews yet.</p>
+        <h2 style={{ margin: 0, fontSize: 24, color: "#111827" }}>What people are hearing</h2>
+        <p style={{ margin: "12px 0 4px", color: "#111827", fontWeight: 600 }}>No ratings yet</p>
+        <p style={{ margin: 0, color: "#6b7280" }}>Be the first to rate this item.</p>
       </section>
     );
   }
@@ -32,42 +35,38 @@ export function ReviewList({ reviews }: ReviewListProps) {
   return (
     <section
       style={{
-        border: "1px solid #d4d4d8",
-        borderRadius: 12,
-        padding: 24,
-        backgroundColor: "#ffffff"
+        borderTop: "1px solid #e5e7eb",
+        paddingTop: 24
       }}
     >
-      <h2 style={{ marginTop: 0 }}>Reviews</h2>
-      <div style={{ display: "grid", gap: 16 }}>
+      <h2 style={{ margin: 0, fontSize: 24, color: "#111827" }}>What people are hearing</h2>
+      <div style={{ display: "grid", gap: 20, marginTop: 18 }}>
         {reviews.map((review) => (
           <article
             key={review.id}
             style={{
-              paddingTop: 16,
-              borderTop: "1px solid #e4e4e7"
+              display: "grid",
+              gap: 8
             }}
           >
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
+                alignItems: "center",
                 gap: 12,
-                flexWrap: "wrap"
+                flexWrap: "wrap",
+                justifyContent: "space-between"
               }}
             >
-              <div>
-                <p style={{ margin: 0, fontWeight: 600 }}>
-                  {review.user.display_name ?? "Anonymous"}
-                </p>
-                <p style={{ margin: "4px 0 0", color: "#71717a", fontSize: 14 }}>
-                  {formatReviewDate(review.created_at)}
-                </p>
-              </div>
-              <p style={{ margin: 0, fontWeight: 600 }}>{review.rating} / 5</p>
+              <p style={{ margin: 0, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.06em" }}>
+                {renderStars(review.rating)}
+              </p>
+              <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+                {formatReviewDate(review.created_at)}
+              </p>
             </div>
-            <p style={{ margin: "12px 0 0", color: "#27272a" }}>
-              {review.review_text?.trim() ? review.review_text : "No written review provided."}
+            <p style={{ margin: 0, color: "#111827", lineHeight: 1.6 }}>
+              {review.review_text?.trim() ? review.review_text : "No note added."}
             </p>
           </article>
         ))}

@@ -39,16 +39,16 @@ export default async function ItemPage({ params }: ItemPageProps) {
       <main
         style={{
           minHeight: "100vh",
-          backgroundColor: "#f4f4f5",
-          padding: "48px 20px"
+          backgroundColor: "#fcfcfb",
+          padding: "56px 20px"
         }}
       >
         <div
           style={{
-            maxWidth: 900,
+            maxWidth: 760,
             margin: "0 auto",
             display: "grid",
-            gap: 24
+            gap: 28
           }}
         >
           <ItemDetail
@@ -65,15 +65,15 @@ export default async function ItemPage({ params }: ItemPageProps) {
           ) : (
             <section
               style={{
-                border: "1px solid #d4d4d8",
-                borderRadius: 12,
-                padding: 24,
-                backgroundColor: "#ffffff"
+                borderTop: "1px solid #e5e7eb",
+                paddingTop: 24
               }}
             >
-              <h2 style={{ marginTop: 0 }}>Your Review</h2>
-              <p style={{ marginBottom: 0, color: "#52525b" }}>
-                Sign in to create or edit your review.
+              <h2 style={{ margin: 0, fontSize: 24, color: "#111827" }}>
+                How does it sound to you?
+              </h2>
+              <p style={{ margin: "12px 0 0", color: "#6b7280" }}>
+                Sign in to leave a rating and a short note.
               </p>
             </section>
           )}

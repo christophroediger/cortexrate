@@ -1,6 +1,6 @@
 (function cortexRateExtensionConfigBootstrap() {
   const config = {
-    environment: "development",
+    environment: "production",
     developmentBaseUrl: "http://localhost:3000",
     productionBaseUrl: "https://cortexrate.app"
   };

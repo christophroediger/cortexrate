@@ -15,20 +15,58 @@ type ErrorResponseBody = {
   };
 };
 
+function StarButton({
+  filled,
+  active,
+  onClick,
+  onMouseEnter,
+  disabled
+}: {
+  filled: boolean;
+  active: boolean;
+  onClick: () => void;
+  onMouseEnter: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      disabled={disabled}
+      aria-label={filled ? "Selected star" : "Select star"}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        fontSize: 32,
+        lineHeight: 1,
+        cursor: disabled ? "default" : "pointer",
+        color: filled ? "#f59e0b" : "#d1d5db",
+        transform: active ? "scale(1.08)" : "scale(1)",
+        transition: "transform 120ms ease, color 120ms ease"
+      }}
+    >
+      ★
+    </button>
+  );
+}
+
 export function ReviewForm({
   canonicalItemId,
   initialRating = 5,
   initialReviewText = ""
 }: ReviewFormProps) {
   const router = useRouter();
-  const [rating, setRating] = useState(String(initialRating));
+  const [rating, setRating] = useState(initialRating);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [reviewText, setReviewText] = useState(initialReviewText ?? "");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
-    setRating(String(initialRating));
+    setRating(initialRating);
     setReviewText(initialReviewText ?? "");
   }, [initialRating, initialReviewText]);
 
@@ -45,7 +83,7 @@ export function ReviewForm({
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          rating: Number(rating),
+          rating,
           review_text: reviewText
         })
       });
@@ -53,16 +91,16 @@ export function ReviewForm({
       const responseBody = (await response.json()) as ErrorResponseBody;
 
       if (!response.ok) {
-        setErrorMessage(responseBody.error?.message ?? "Review could not be saved.");
+        setErrorMessage(responseBody.error?.message ?? "Your rating could not be saved.");
         return;
       }
 
-      setSuccessMessage("Review saved.");
+      setSuccessMessage("Your rating is saved.");
       startTransition(() => {
         router.refresh();
       });
     } catch {
-      setErrorMessage("Review could not be saved.");
+      setErrorMessage("Your rating could not be saved.");
     } finally {
       setIsPending(false);
     }
@@ -71,47 +109,62 @@ export function ReviewForm({
   return (
     <section
       style={{
-        border: "1px solid #d4d4d8",
-        borderRadius: 12,
-        padding: 24,
-        backgroundColor: "#ffffff"
+        borderTop: "1px solid #e5e7eb",
+        paddingTop: 24
       }}
     >
-      <h2 style={{ marginTop: 0 }}>Your Review</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
+      <h2 style={{ margin: 0, fontSize: 24, color: "#111827" }}>How does it sound?</h2>
+      <p style={{ margin: "10px 0 0", color: "#6b7280", lineHeight: 1.5 }}>
+        Leave a quick rating and, if you like, a short note for other players.
+      </p>
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "grid", gap: 18, marginTop: 18 }}
+        onMouseLeave={() => setHoverRating(null)}
+      >
         <label style={{ display: "grid", gap: 8 }}>
-          <span style={{ fontWeight: 600 }}>Rating</span>
-          <select
-            value={rating}
-            onChange={(event) => setRating(event.target.value)}
-            disabled={isPending}
+          <div
+            role="radiogroup"
+            aria-label="Choose a rating"
             style={{
-              padding: 10,
-              borderRadius: 8,
-              border: "1px solid #a1a1aa",
-              backgroundColor: "#ffffff"
+              display: "flex",
+              gap: 6,
+              alignItems: "center"
             }}
           >
-            {[5, 4, 3, 2, 1].map((value) => (
-              <option key={value} value={value}>
-                {value} / 5
-              </option>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <StarButton
+                key={value}
+                filled={value <= (hoverRating ?? rating)}
+                active={value === (hoverRating ?? rating)}
+                disabled={isPending}
+                onClick={() => setRating(value)}
+                onMouseEnter={() => setHoverRating(value)}
+              />
             ))}
-          </select>
+            <span style={{ marginLeft: 10, color: "#6b7280", fontSize: 14 }}>
+              {hoverRating ?? rating} / 5
+            </span>
+          </div>
         </label>
 
         <label style={{ display: "grid", gap: 8 }}>
-          <span style={{ fontWeight: 600 }}>Review</span>
+          <span style={{ fontWeight: 600, color: "#374151" }}>Add a short note (optional)</span>
           <textarea
             value={reviewText}
             onChange={(event) => setReviewText(event.target.value)}
-            rows={5}
+            rows={4}
+            maxLength={280}
+            placeholder="What stands out to you?"
             disabled={isPending}
             style={{
               padding: 12,
-              borderRadius: 8,
-              border: "1px solid #a1a1aa",
-              resize: "vertical"
+              borderRadius: 12,
+              border: "1px solid #d1d5db",
+              resize: "vertical",
+              font: "inherit",
+              color: "#111827",
+              backgroundColor: "#ffffff"
             }}
           />
         </label>
@@ -120,16 +173,17 @@ export function ReviewForm({
           type="submit"
           disabled={isPending}
           style={{
-            padding: "12px 16px",
-            borderRadius: 8,
+            padding: "12px 18px",
+            borderRadius: 999,
             border: "none",
-            backgroundColor: isPending ? "#a1a1aa" : "#18181b",
+            backgroundColor: isPending ? "#9ca3af" : "#111827",
             color: "#ffffff",
             fontWeight: 600,
-            cursor: isPending ? "default" : "pointer"
+            cursor: isPending ? "default" : "pointer",
+            justifySelf: "start"
           }}
         >
-          {isPending ? "Saving..." : "Save Review"}
+          {isPending ? "Saving..." : "Save rating"}
         </button>
 
         {errorMessage ? <p style={{ margin: 0, color: "#b91c1c" }}>{errorMessage}</p> : null}
