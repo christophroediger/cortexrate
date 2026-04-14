@@ -3,11 +3,14 @@ import { SignInForm } from "@/components/auth/sign-in-form";
 type LoginPageProps = {
   searchParams: Promise<{
     redirectTo?: string;
+    message?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { redirectTo } = await searchParams;
+  const { redirectTo, message } = await searchParams;
+  const pageMessage =
+    message === "password-updated" ? "You can now log in with your new password." : null;
 
   return (
     <main
@@ -68,7 +71,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         </div>
 
-        <SignInForm redirectTo={redirectTo || "/"} />
+        <SignInForm redirectTo={redirectTo || "/"} initialMessage={pageMessage} />
       </section>
     </main>
   );

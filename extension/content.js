@@ -161,11 +161,178 @@
     return score;
   }
 
-  function findFirstTextCandidate(selectors) {
+  function queryAllInScope(scopeRoot, selector) {
+    if (!scopeRoot || scopeRoot === document) {
+      return Array.from(document.querySelectorAll(selector));
+    }
+
+    const matches = [];
+
+    if (scopeRoot instanceof Element && scopeRoot.matches(selector)) {
+      matches.push(scopeRoot);
+    }
+
+    matches.push(...scopeRoot.querySelectorAll(selector));
+
+    return matches;
+  }
+
+  function getCloseButtonScore(container) {
+    const closeSelectors = [
+      "[aria-label*='close' i]",
+      "[title*='close' i]",
+      "button"
+    ];
+
+    for (const selector of closeSelectors) {
+      const elements = queryAllInScope(container, selector);
+
+      for (const element of elements) {
+        const text = getCleanText(element);
+        const ariaLabel = element.getAttribute?.("aria-label");
+        const title = element.getAttribute?.("title");
+
+        if (
+          /close/i.test(ariaLabel || "") ||
+          /close/i.test(title || "") ||
+          text === "×" ||
+          text === "✕" ||
+          text === "x" ||
+          text === "X"
+        ) {
+          return 45;
+        }
+      }
+    }
+
+    return 0;
+  }
+
+  function scoreDetailContainer(container) {
+    if (!(container instanceof Element) || !isVisible(container)) {
+      return -1;
+    }
+
+    const rect = container.getBoundingClientRect();
+
+    if (rect.width < 320 || rect.height < 220) {
+      return -1;
+    }
+
+    let score = 0;
+    const style = window.getComputedStyle(container);
+    const viewportCenterX = window.innerWidth / 2;
+    const viewportCenterY = window.innerHeight / 2;
+    const containerCenterX = rect.left + rect.width / 2;
+    const containerCenterY = rect.top + rect.height / 2;
+    const centerDistance =
+      Math.abs(viewportCenterX - containerCenterX) + Math.abs(viewportCenterY - containerCenterY);
+
+    if (style.position === "fixed") {
+      score += 55;
+    } else if (style.position === "absolute" || style.position === "sticky") {
+      score += 25;
+    }
+
+    if (rect.left >= 0 && rect.top >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight) {
+      score += 10;
+    }
+
+    score += Math.max(0, 260 - centerDistance / 4);
+    score += getCloseButtonScore(container);
+
+    const containerText = getCleanText(container) || "";
+
+    if (/\bdownload(?:ed)?\b/i.test(containerText)) {
+      score += 12;
+    }
+
+    if (/\bshare\b/i.test(containerText)) {
+      score += 12;
+    }
+
+    if (/\bpreset devices\b/i.test(containerText) || /\bscenes\b/i.test(containerText)) {
+      score += 15;
+    }
+
+    if (/\bcapture type\b/i.test(containerText) || /\bpreferred instrument\b/i.test(containerText)) {
+      score += 15;
+    }
+
+    if (queryAllInScope(container, "h1,[class*='title'],[class*='name'],[data-testid*='title']").length > 0) {
+      score += 20;
+    }
+
+    return score;
+  }
+
+  function getActiveDetailContainer() {
+    if (!isSupportedDetailPage()) {
+      return document;
+    }
+
+    const candidateElements = [];
+    const seenElements = new Set();
+
+    function pushCandidate(element) {
+      if (!(element instanceof Element) || seenElements.has(element)) {
+        return;
+      }
+
+      seenElements.add(element);
+      candidateElements.push(element);
+    }
+
+    const centerElement = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+
+    let currentElement = centerElement;
+    while (currentElement instanceof Element && currentElement !== document.body) {
+      pushCandidate(currentElement);
+      currentElement = currentElement.parentElement;
+    }
+
+    const detailContainerSelectors = [
+      "[role='dialog']",
+      "[aria-modal='true']",
+      "[class*='modal']",
+      "[class*='dialog']",
+      "[class*='overlay']",
+      "[class*='drawer']",
+      "[class*='sheet']",
+      "main section",
+      "main article",
+      "main > div",
+      "body > div"
+    ];
+
+    for (const selector of detailContainerSelectors) {
+      document.querySelectorAll(selector).forEach((element) => {
+        pushCandidate(element);
+      });
+    }
+
+    let bestMatch = null;
+
+    for (const element of candidateElements) {
+      const score = scoreDetailContainer(element);
+
+      if (score > (bestMatch?.score ?? -1)) {
+        bestMatch = { element, score };
+      }
+    }
+
+    if (bestMatch && bestMatch.score > 80) {
+      return bestMatch.element;
+    }
+
+    return document.querySelector("main") || document;
+  }
+
+  function findFirstTextCandidate(selectors, scopeRoot = document) {
     let bestMatch = null;
 
     for (const selector of selectors) {
-      const elements = document.querySelectorAll(selector);
+      const elements = queryAllInScope(scopeRoot, selector);
 
       for (const element of elements) {
         const text = getCleanText(element);
@@ -180,8 +347,8 @@
     return bestMatch?.score > 0 ? bestMatch : null;
   }
 
-  function findFirstText(selectors) {
-    return findFirstTextCandidate(selectors)?.text ?? null;
+  function findFirstText(selectors, scopeRoot = document) {
+    return findFirstTextCandidate(selectors, scopeRoot)?.text ?? null;
   }
 
   function normalizeCandidateName(value) {
@@ -565,7 +732,8 @@
   }
 
   function scrapeIdentity() {
-    const titleCandidate = findFirstTextCandidate(titleSelectors);
+    const scopeRoot = getActiveDetailContainer();
+    const titleCandidate = findFirstTextCandidate(titleSelectors, scopeRoot);
     const title = titleCandidate?.text ?? null;
     const creator = findCreatorText(titleCandidate?.element ?? null);
     const type = findItemType(title, creator);

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 type SignInFormProps = {
   redirectTo: string;
+  initialMessage?: string | null;
 };
 
 type ErrorResponseBody = {
@@ -22,12 +23,12 @@ function getErrorMessage(responseBody: ErrorResponseBody | { data?: { redirect_t
   return "Log-in failed.";
 }
 
-export function SignInForm({ redirectTo }: SignInFormProps) {
+export function SignInForm({ redirectTo, initialMessage = null }: SignInFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(initialMessage);
   const [isPending, setIsPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -58,7 +59,7 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
         return;
       }
 
-      setSuccessMessage("Logged in successfully");
+      setSuccessMessage("Logged in successfully.");
       window.setTimeout(() => {
         router.push(responseBody.data?.redirect_to || "/");
         router.refresh();
@@ -144,8 +145,12 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
         </Link>
       </p>
 
-      {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
-      {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
+      {errorMessage ? (
+        <p style={{ margin: 0, color: "#fca5a5", lineHeight: 1.5 }}>{errorMessage}</p>
+      ) : null}
+      {successMessage ? (
+        <p style={{ margin: 0, color: "#86efac", lineHeight: 1.5 }}>{successMessage}</p>
+      ) : null}
     </form>
   );
 }

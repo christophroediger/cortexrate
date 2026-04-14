@@ -127,7 +127,7 @@ export function UpdatePasswordForm() {
 
       setSuccessMessage("Password updated successfully.");
       window.setTimeout(() => {
-        router.push("/login");
+        router.push("/login?message=password-updated");
         router.refresh();
       }, 450);
     } catch {
@@ -176,8 +176,12 @@ export function UpdatePasswordForm() {
         {isSettingSession ? "Preparing..." : isPending ? "Saving..." : "Set new password"}
       </button>
 
-      {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
-      {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
+      {errorMessage ? (
+        <p style={{ margin: 0, color: "#fca5a5", lineHeight: 1.5 }}>{errorMessage}</p>
+      ) : null}
+      {successMessage ? (
+        <p style={{ margin: 0, color: "#86efac", lineHeight: 1.5 }}>{successMessage}</p>
+      ) : null}
     </form>
   );
 }
