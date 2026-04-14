@@ -15,11 +15,13 @@ function readRecoveryTokens() {
 
   const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
   const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+  const tokenHash = searchParams.get("token_hash");
   const type = hashParams.get("type") || searchParams.get("type");
 
   return {
     accessToken,
     refreshToken,
+    tokenHash,
     type
   };
 }
@@ -36,9 +38,9 @@ export function UpdatePasswordForm() {
     let isMounted = true;
 
     async function initializeRecoverySession() {
-      const { accessToken, refreshToken, type } = readRecoveryTokens();
+      const { accessToken, refreshToken, tokenHash, type } = readRecoveryTokens();
 
-      if (!accessToken || type !== "recovery") {
+      if (type !== "recovery" || (!accessToken && !tokenHash)) {
         if (isMounted) {
           setIsSettingSession(false);
           setErrorMessage("Open the password reset link from your email to continue.");
@@ -52,10 +54,17 @@ export function UpdatePasswordForm() {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          })
+          body: JSON.stringify(
+            tokenHash
+              ? {
+                  token_hash: tokenHash,
+                  type
+                }
+              : {
+                  access_token: accessToken,
+                  refresh_token: refreshToken
+                }
+          )
         });
 
         const responseBody = (await response.json()) as ErrorResponseBody;
@@ -71,6 +80,7 @@ export function UpdatePasswordForm() {
         cleanUrl.hash = "";
         cleanUrl.searchParams.delete("access_token");
         cleanUrl.searchParams.delete("refresh_token");
+        cleanUrl.searchParams.delete("token_hash");
         cleanUrl.searchParams.delete("type");
         window.history.replaceState({}, "", cleanUrl.toString());
       } catch {
