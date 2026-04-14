@@ -26,3 +26,21 @@ export function setAuthCookies(
     });
   }
 }
+
+export function clearAuthCookies(response: NextResponse) {
+  response.cookies.set(AUTH_ACCESS_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(0)
+  });
+
+  response.cookies.set(AUTH_REFRESH_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(0)
+  });
+}

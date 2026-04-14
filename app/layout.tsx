@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { AuthStatus } from "@/components/auth/auth-status";
+import { getAuthContext } from "@/lib/auth";
+
 export const metadata: Metadata = {
   title: "CortexRate",
   description: "Community ratings for Neural DSP Cortex Cloud captures and presets."
@@ -10,10 +13,15 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const authContext = await getAuthContext();
+
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body style={{ margin: 0 }}>
+        <AuthStatus isAuthenticated={Boolean(authContext)} />
+        {children}
+      </body>
     </html>
   );
 }

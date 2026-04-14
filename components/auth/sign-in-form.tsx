@@ -135,6 +135,15 @@ export function SignInForm({ redirectTo }: SignInFormProps) {
         </Link>
       </p>
 
+      <p style={{ margin: 0, color: "#a1a1aa", fontSize: 14 }}>
+        <Link
+          href="/reset-password"
+          style={{ color: "#fafafa", textDecoration: "none", fontWeight: 600 }}
+        >
+          Forgot password?
+        </Link>
+      </p>
+
       {errorMessage ? <p style={{ margin: 0, color: "#fca5a5" }}>{errorMessage}</p> : null}
       {successMessage ? <p style={{ margin: 0, color: "#86efac" }}>{successMessage}</p> : null}
     </form>
