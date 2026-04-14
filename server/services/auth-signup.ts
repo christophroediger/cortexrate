@@ -111,6 +111,25 @@ export async function signUpWithEmailPassword(
     throw new ApiError(500, "CONFIG_ERROR", "Supabase authentication is not configured.");
   }
 
+  const existingUser = await findAuthAdminUserByEmail(email);
+
+  if (existingUser?.emailConfirmedAt) {
+    throw new ApiError(
+      409,
+      "CONFLICT",
+      "An account with this email already exists. Please log in."
+    );
+  }
+
+  if (existingUser && !existingUser.emailConfirmedAt) {
+    await resendConfirmationEmail(email);
+
+    return {
+      status: "confirmation_resent",
+      redirectTo: "/login"
+    };
+  }
+
   const emailRedirectTo = getEmailRedirectTo();
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
@@ -158,25 +177,6 @@ export async function signUpWithEmailPassword(
       redirectTo: redirectTo || "/",
       accessToken: authBody.access_token,
       refreshToken: authBody.refresh_token
-    };
-  }
-
-  const existingUser = await findAuthAdminUserByEmail(email);
-
-  if (existingUser?.emailConfirmedAt) {
-    throw new ApiError(
-      409,
-      "CONFLICT",
-      "An account with this email already exists. Please log in."
-    );
-  }
-
-  if (existingUser && !existingUser.emailConfirmedAt) {
-    await resendConfirmationEmail(email);
-
-    return {
-      status: "confirmation_resent",
-      redirectTo: "/login"
     };
   }
 
