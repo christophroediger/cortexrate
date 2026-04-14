@@ -10,7 +10,11 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { redirectTo, message } = await searchParams;
   const pageMessage =
-    message === "password-updated" ? "You can now log in with your new password." : null;
+    message === "password-updated"
+      ? "You can now log in with your new password."
+      : message === "account-confirmed"
+        ? "Your account has been verified. You can now log in."
+        : null;
 
   return (
     <main

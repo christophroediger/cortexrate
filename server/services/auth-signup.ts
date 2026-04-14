@@ -2,6 +2,7 @@ import "server-only";
 
 import { ApiError } from "@/lib/api-error";
 import { env, getAppUrl } from "@/lib/env";
+import { findAuthAdminUserByEmail } from "@/server/repositories/auth-admin-users";
 
 type SupabaseSignupResponse = {
   access_token?: string;
@@ -25,7 +26,7 @@ export type SignupResult =
     };
 
 function getEmailRedirectTo() {
-  return new URL("/login", getAppUrl()).toString();
+  return new URL("/login?message=account-confirmed", getAppUrl()).toString();
 }
 
 type SupabaseAuthErrorResponse = {
@@ -149,6 +150,16 @@ export async function signUpWithEmailPassword(
       accessToken: authBody.access_token,
       refreshToken: authBody.refresh_token
     };
+  }
+
+  const existingUser = await findAuthAdminUserByEmail(email);
+
+  if (existingUser?.emailConfirmedAt) {
+    throw new ApiError(
+      409,
+      "CONFLICT",
+      "An account with this email already exists. Please log in."
+    );
   }
 
   return {
