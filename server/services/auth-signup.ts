@@ -2,7 +2,6 @@ import "server-only";
 
 import { ApiError } from "@/lib/api-error";
 import { env, getAppUrl } from "@/lib/env";
-import { findAuthUserByEmail } from "@/server/repositories/auth-users";
 
 type SupabaseSignupResponse = {
   access_token?: string;
@@ -54,6 +53,14 @@ async function parseAuthError(response: Response) {
   }
 }
 
+function isExistingUserError(message: string) {
+  return /user already registered/i.test(message);
+}
+
+function isConfirmedAccountError(message: string) {
+  return /\balready confirmed\b/i.test(message) || /\bconfirmed\b/i.test(message);
+}
+
 async function resendConfirmationEmail(email: string) {
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/resend`, {
     method: "POST",
@@ -75,10 +82,18 @@ async function resendConfirmationEmail(email: string) {
   if (!response.ok) {
     const failureMessage = await parseAuthError(response);
 
+    if (isConfirmedAccountError(failureMessage)) {
+      throw new ApiError(
+        409,
+        "CONFLICT",
+        "An account with this email already exists. Please log in."
+      );
+    }
+
     throw new ApiError(
       400,
       "BAD_REQUEST",
-      failureMessage || "We could not resend the confirmation email."
+      "Your account exists but we couldn't resend the confirmation email. Please try again later."
     );
   }
 }
@@ -109,34 +124,20 @@ export async function signUpWithEmailPassword(
   if (!response.ok) {
     const failureMessage = await parseAuthError(response);
 
-    if (/user already registered/i.test(failureMessage)) {
-      try {
-        await resendConfirmationEmail(email);
+    if (isExistingUserError(failureMessage)) {
+      await resendConfirmationEmail(email);
 
-        return {
-          status: "confirmation_resent",
-          redirectTo: "/login"
-        };
-      } catch {
-        const existingUser = await findAuthUserByEmail(email);
-
-        if (existingUser?.emailConfirmedAt) {
-          throw new ApiError(
-            409,
-            "CONFLICT",
-            "An account with this email already exists. Please log in."
-          );
-        }
-
-        throw new ApiError(
-          400,
-          "BAD_REQUEST",
-          "Your account exists but we couldn't resend the confirmation email. Please try again later."
-        );
-      }
+      return {
+        status: "confirmation_resent",
+        redirectTo: "/login"
+      };
     }
 
-    throw new ApiError(400, "BAD_REQUEST", failureMessage || "Sign-up could not be completed.");
+    throw new ApiError(
+      400,
+      "BAD_REQUEST",
+      "Sign-up could not be completed. Please try again."
+    );
   }
 
   const authBody = (await response.json()) as SupabaseSignupResponse;
@@ -148,16 +149,6 @@ export async function signUpWithEmailPassword(
       accessToken: authBody.access_token,
       refreshToken: authBody.refresh_token
     };
-  }
-
-  const existingUser = await findAuthUserByEmail(email);
-
-  if (existingUser?.emailConfirmedAt) {
-    throw new ApiError(
-      409,
-      "CONFLICT",
-      "An account with this email already exists. Please log in."
-    );
   }
 
   return {
