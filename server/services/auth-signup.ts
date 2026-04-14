@@ -63,6 +63,7 @@ function isConfirmedAccountError(message: string) {
 }
 
 async function resendConfirmationEmail(email: string) {
+  const emailRedirectTo = getEmailRedirectTo();
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/resend`, {
     method: "POST",
     headers: {
@@ -72,9 +73,11 @@ async function resendConfirmationEmail(email: string) {
     body: JSON.stringify({
       type: "signup",
       email,
+      email_redirect_to: emailRedirectTo,
+      redirect_to: emailRedirectTo,
       options: {
-        emailRedirectTo: getEmailRedirectTo(),
-        email_redirect_to: getEmailRedirectTo()
+        emailRedirectTo: emailRedirectTo,
+        email_redirect_to: emailRedirectTo
       }
     }),
     cache: "no-store"
@@ -108,6 +111,7 @@ export async function signUpWithEmailPassword(
     throw new ApiError(500, "CONFIG_ERROR", "Supabase authentication is not configured.");
   }
 
+  const emailRedirectTo = getEmailRedirectTo();
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
     headers: {
@@ -117,7 +121,12 @@ export async function signUpWithEmailPassword(
     body: JSON.stringify({
       email,
       password,
-      email_redirect_to: getEmailRedirectTo()
+      email_redirect_to: emailRedirectTo,
+      redirect_to: emailRedirectTo,
+      options: {
+        emailRedirectTo: emailRedirectTo,
+        email_redirect_to: emailRedirectTo
+      }
     }),
     cache: "no-store"
   });
@@ -160,6 +169,15 @@ export async function signUpWithEmailPassword(
       "CONFLICT",
       "An account with this email already exists. Please log in."
     );
+  }
+
+  if (existingUser && !existingUser.emailConfirmedAt) {
+    await resendConfirmationEmail(email);
+
+    return {
+      status: "confirmation_resent",
+      redirectTo: "/login"
+    };
   }
 
   return {
