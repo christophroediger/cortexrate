@@ -22,6 +22,8 @@ export async function POST(request: Request) {
       throw new ApiError(400, "BAD_REQUEST", "Invalid reset-password request.");
     }
 
+    const updatePasswordRedirectUrl = new URL("/update-password", getAppUrl()).toString();
+
     const response = await fetch(`${env.SUPABASE_URL}/auth/v1/recover`, {
       method: "POST",
       headers: {
@@ -30,7 +32,8 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         email: parsedBody.data.email,
-        redirect_to: new URL("/update-password", getAppUrl()).toString()
+        redirect_to: updatePasswordRedirectUrl,
+        redirectTo: updatePasswordRedirectUrl
       }),
       cache: "no-store"
     });
