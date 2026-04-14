@@ -1,4 +1,6 @@
 import { SignInForm } from "@/components/auth/sign-in-form";
+import { LOGIN_FLASH_COOKIE } from "@/lib/login-flash";
+import { cookies } from "next/headers";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -9,11 +11,15 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { redirectTo, message } = await searchParams;
+  const cookieStore = await cookies();
+  const loginFlash = cookieStore.get(LOGIN_FLASH_COOKIE)?.value;
   const pageMessage =
     message === "password-updated"
       ? "You can now log in with your new password."
-      : message === "account-confirmed"
+      : message === "account-confirmed" && loginFlash === "account-confirmed"
         ? "Your account has been verified. You can now log in."
+        : message === "verification-error" && loginFlash === "verification-error"
+          ? "This verification link is invalid or expired."
         : null;
 
   return (

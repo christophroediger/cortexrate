@@ -26,7 +26,7 @@ export type SignupResult =
     };
 
 function getEmailRedirectTo() {
-  return new URL("/login?message=account-confirmed", getAppUrl()).toString();
+  return new URL("/confirm-signup", getAppUrl()).toString();
 }
 
 type SupabaseAuthErrorResponse = {
