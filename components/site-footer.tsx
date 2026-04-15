@@ -13,16 +13,44 @@ export function SiteFooter() {
           'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
       }}
     >
-      <Link
-        href="/imprint"
+      <nav
         style={{
-          color: "rgba(228, 228, 231, 0.68)",
-          fontSize: 14,
-          textDecoration: "none"
+          display: "flex",
+          alignItems: "center",
+          gap: 16
         }}
       >
-        Impressum
-      </Link>
+        <Link
+          href="/imprint"
+          style={{
+            color: "rgba(228, 228, 231, 0.68)",
+            fontSize: 14,
+            textDecoration: "none"
+          }}
+        >
+          Impressum
+        </Link>
+        <Link
+          href="/privacy"
+          style={{
+            color: "rgba(228, 228, 231, 0.68)",
+            fontSize: 14,
+            textDecoration: "none"
+          }}
+        >
+          Privacy
+        </Link>
+        <Link
+          href="/contact"
+          style={{
+            color: "rgba(228, 228, 231, 0.68)",
+            fontSize: 14,
+            textDecoration: "none"
+          }}
+        >
+          Contact
+        </Link>
+      </nav>
     </footer>
   );
 }
