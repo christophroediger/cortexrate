@@ -94,6 +94,76 @@ export default function ImprintPage() {
             </p>
           </div>
         </div>
+
+        <section
+          style={{
+            display: "grid",
+            gap: 20,
+            paddingTop: 24,
+            borderTop: "1px solid rgba(244, 244, 245, 0.08)"
+          }}
+        >
+          <div style={{ display: "grid", gap: 10 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 28,
+                lineHeight: 1.1,
+                letterSpacing: "-0.02em",
+                color: "#fafafa"
+              }}
+            >
+              Privacy Policy
+            </h2>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: "#d4d4d8" }}>
+              This Privacy Policy explains how CortexRate collects and uses data.
+            </p>
+          </div>
+
+          <section style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#fafafa" }}>Data we collect</h3>
+            <ul style={{ margin: 0, paddingLeft: 22, display: "grid", gap: 8, lineHeight: 1.7 }}>
+              <li>Email address (for account creation and login)</li>
+              <li>Ratings and optional notes you submit</li>
+            </ul>
+          </section>
+
+          <section style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#fafafa" }}>How we use data</h3>
+            <ul style={{ margin: 0, paddingLeft: 22, display: "grid", gap: 8, lineHeight: 1.7 }}>
+              <li>To authenticate users</li>
+              <li>To display and store ratings</li>
+              <li>To improve the product</li>
+            </ul>
+          </section>
+
+          <section style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#fafafa" }}>Data sharing</h3>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: "#d4d4d8" }}>
+              We do not sell or share your personal data with third parties.
+            </p>
+          </section>
+
+          <section style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#fafafa" }}>Storage</h3>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: "#d4d4d8" }}>
+              Data is securely stored using Supabase.
+            </p>
+          </section>
+
+          <section style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#fafafa" }}>Contact</h3>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: "#d4d4d8" }}>
+              For questions, contact:{" "}
+              <a
+                href="mailto:kantern.lamellen.3v@icloud.com"
+                style={{ color: "#fafafa", textDecoration: "none" }}
+              >
+                kantern.lamellen.3v@icloud.com
+              </a>
+            </p>
+          </section>
+        </section>
       </section>
     </main>
   );
