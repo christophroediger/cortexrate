@@ -156,7 +156,8 @@ export async function signUpWithEmailPassword(
 
   const emailRedirectTo = getEmailRedirectTo();
   logInfo("signup_fresh_attempt_start", {
-    hasRedirectTo: Boolean(emailRedirectTo)
+    hasRedirectTo: Boolean(emailRedirectTo),
+    emailRedirectTo
   });
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
