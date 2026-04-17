@@ -81,8 +81,7 @@ export default function HomePage() {
             Rate presets. Discover better sounds.
           </h1>
           <p style={{ margin: 0, color: "#a1a1aa", fontSize: 16, lineHeight: 1.55 }}>
-            Free Chrome extension for rating presets. The more users rate presets, the
-            more useful CortexRate becomes.
+            Free Chrome extension for rating presets and samples.
           </p>
         </div>
 
@@ -114,7 +113,7 @@ export default function HomePage() {
               lineHeight: 1.5
             }}
           >
-            Free · Chrome extension · Early, but already usable
+            Free · Works instantly · No signup required
           </p>
         </div>
       </section>
