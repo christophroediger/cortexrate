@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { PasswordRequirements } from "@/components/auth/password-requirements";
+import { PASSWORD_POLICY_MESSAGE, isPasswordPolicySatisfied } from "@/lib/password-policy";
+
 type SignUpFormProps = {
   redirectTo: string;
 };
@@ -36,9 +39,17 @@ export function SignUpForm({ redirectTo }: SignUpFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const isPasswordValid = isPasswordPolicySatisfied(password);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!isPasswordValid) {
+      setErrorMessage(PASSWORD_POLICY_MESSAGE);
+      setSuccessMessage(null);
+      return;
+    }
+
     setIsPending(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -126,17 +137,19 @@ export function SignUpForm({ redirectTo }: SignUpFormProps) {
         />
       </label>
 
+      <PasswordRequirements password={password} />
+
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || !isPasswordValid}
         style={{
           padding: "12px 18px",
           borderRadius: 999,
           border: "none",
-          backgroundColor: isPending ? "#3f3f46" : "#fafafa",
+          backgroundColor: isPending || !isPasswordValid ? "#3f3f46" : "#fafafa",
           color: "#18181b",
           fontWeight: 700,
-          cursor: isPending ? "default" : "pointer",
+          cursor: isPending || !isPasswordValid ? "default" : "pointer",
           justifySelf: "start"
         }}
       >

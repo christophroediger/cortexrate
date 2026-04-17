@@ -3,6 +3,7 @@ import "server-only";
 import { ApiError } from "@/lib/api-error";
 import { env, getAppUrl, getSupabasePublicAuthKey } from "@/lib/env";
 import { logInfo, logWarn } from "@/lib/observability";
+import { PASSWORD_POLICY_MESSAGE, isPasswordPolicyErrorMessage } from "@/lib/password-policy";
 import { sanitizeRedirectPath } from "@/lib/redirects";
 import { findAuthAdminUserByEmail } from "@/server/repositories/auth-admin-users";
 
@@ -190,6 +191,10 @@ export async function signUpWithEmailPassword(
         status: "confirmation_resent",
         redirectTo: "/login"
       };
+    }
+
+    if (isPasswordPolicyErrorMessage(failureMessage)) {
+      throw new ApiError(400, "SIGNUP_PASSWORD_POLICY_FAILED", PASSWORD_POLICY_MESSAGE);
     }
 
     throw new ApiError(

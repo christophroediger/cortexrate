@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { PasswordRequirements } from "@/components/auth/password-requirements";
+import { PASSWORD_POLICY_MESSAGE, isPasswordPolicySatisfied } from "@/lib/password-policy";
+
 type ErrorResponseBody = {
   error?: {
     message?: string;
@@ -34,6 +37,7 @@ export function UpdatePasswordForm() {
   const [isSettingSession, setIsSettingSession] = useState(true);
   const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const isPasswordValid = isPasswordPolicySatisfied(password);
 
   useEffect(() => {
     let isMounted = true;
@@ -119,6 +123,12 @@ export function UpdatePasswordForm() {
       return;
     }
 
+    if (!isPasswordValid) {
+      setErrorMessage(PASSWORD_POLICY_MESSAGE);
+      setSuccessMessage(null);
+      return;
+    }
+
     setIsPending(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -176,19 +186,25 @@ export function UpdatePasswordForm() {
         />
       </label>
 
+      <PasswordRequirements password={password} />
+
       <button
         type="submit"
-        disabled={isSettingSession || isPending || !isRecoveryReady}
+        disabled={isSettingSession || isPending || !isRecoveryReady || !isPasswordValid}
         style={{
           padding: "12px 18px",
           borderRadius: 999,
           border: "none",
           backgroundColor:
-            isSettingSession || isPending || !isRecoveryReady ? "#3f3f46" : "#fafafa",
+            isSettingSession || isPending || !isRecoveryReady || !isPasswordValid
+              ? "#3f3f46"
+              : "#fafafa",
           color: "#18181b",
           fontWeight: 700,
           cursor:
-            isSettingSession || isPending || !isRecoveryReady ? "default" : "pointer",
+            isSettingSession || isPending || !isRecoveryReady || !isPasswordValid
+              ? "default"
+              : "pointer",
           justifySelf: "start"
         }}
       >

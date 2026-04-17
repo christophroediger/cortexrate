@@ -7,6 +7,7 @@ import { errorFromUnknown } from "@/lib/api-response";
 import { AUTH_ACCESS_COOKIE } from "@/lib/auth";
 import { env, getSupabasePublicAuthKey } from "@/lib/env";
 import { logWarn } from "@/lib/observability";
+import { PASSWORD_POLICY_MESSAGE, isPasswordPolicyErrorMessage } from "@/lib/password-policy";
 
 const updatePasswordRequestSchema = z.object({
   password: z.string().min(8)
@@ -68,12 +69,21 @@ export async function POST(request: Request) {
         status: response.status,
         responseText: failureText
       });
+
+      const userSafeMessage = isPasswordPolicyErrorMessage(failureText)
+        ? PASSWORD_POLICY_MESSAGE
+        : response.status === 401
+          ? "Your reset link is no longer valid."
+          : "We couldn't update your password.";
+
       throw new ApiError(
         response.status === 401 ? 401 : 400,
-        response.status === 401 ? "UNAUTHORIZED" : "BAD_REQUEST",
         response.status === 401
-          ? "Your reset link is no longer valid."
-          : "We couldn't update your password."
+          ? "UNAUTHORIZED"
+          : isPasswordPolicyErrorMessage(failureText)
+            ? "PASSWORD_POLICY_FAILED"
+            : "BAD_REQUEST",
+        userSafeMessage
       );
     }
 
