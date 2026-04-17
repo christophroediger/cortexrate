@@ -81,7 +81,7 @@ export default function HomePage() {
             Rate presets. Discover better sounds.
           </h1>
           <p style={{ margin: 0, color: "#a1a1aa", fontSize: 16, lineHeight: 1.55 }}>
-            Free Chrome extension for rating presets and samples.
+            See preset ratings directly on the Neural DSP Cortex Cloud — right on the page.
           </p>
         </div>
 
