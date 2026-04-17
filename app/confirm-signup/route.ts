@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { env } from "@/lib/env";
+import { env, getSupabasePublicAuthKey } from "@/lib/env";
 import { LOGIN_FLASH_COOKIE, LOGIN_FLASH_MAX_AGE_SECONDS } from "@/lib/login-flash";
 import { logWarn } from "@/lib/observability";
 
@@ -26,8 +26,9 @@ export async function GET(request: Request) {
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const rawType = requestUrl.searchParams.get("type");
   const type = rawType === "signup" ? "signup" : rawType === "email" ? "email" : null;
+  const publicAuthKey = getSupabasePublicAuthKey();
 
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+  if (!env.SUPABASE_URL || !publicAuthKey) {
     return withFlashRedirect("verification-error", requestUrl);
   }
 
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: env.SUPABASE_ANON_KEY
+        apikey: publicAuthKey
       },
       body: JSON.stringify({
         token_hash: tokenHash,

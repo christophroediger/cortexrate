@@ -5,7 +5,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { AUTH_ACCESS_COOKIE } from "@/lib/auth";
-import { env } from "@/lib/env";
+import { env, getSupabasePublicAuthKey } from "@/lib/env";
 import { logWarn } from "@/lib/observability";
 
 const updatePasswordRequestSchema = z.object({
@@ -14,7 +14,9 @@ const updatePasswordRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    const publicAuthKey = getSupabasePublicAuthKey();
+
+    if (!env.SUPABASE_URL || !publicAuthKey) {
       throw new ApiError(500, "CONFIG_ERROR", "Supabase authentication is not configured.");
     }
 
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
 
     const sessionResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       headers: {
-        apikey: env.SUPABASE_ANON_KEY,
+        apikey: publicAuthKey,
         Authorization: `Bearer ${accessToken}`
       },
       cache: "no-store"
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        apikey: env.SUPABASE_ANON_KEY,
+        apikey: publicAuthKey,
         Authorization: `Bearer ${accessToken}`
       },
       body: JSON.stringify({

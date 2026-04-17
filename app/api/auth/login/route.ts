@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
-import { env } from "@/lib/env";
+import { env, getSupabasePublicAuthKey } from "@/lib/env";
 import { logWarn } from "@/lib/observability";
 import { sanitizeRedirectPath } from "@/lib/redirects";
 
@@ -21,7 +21,9 @@ type SupabaseLoginResponse = {
 
 export async function POST(request: Request) {
   try {
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    const publicAuthKey = getSupabasePublicAuthKey();
+
+    if (!env.SUPABASE_URL || !publicAuthKey) {
       throw new ApiError(500, "CONFIG_ERROR", "Supabase authentication is not configured.");
     }
 
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: env.SUPABASE_ANON_KEY
+        apikey: publicAuthKey
       },
       body: JSON.stringify({
         email: parsedBody.data.email,

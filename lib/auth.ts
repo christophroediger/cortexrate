@@ -3,7 +3,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 
 import { ApiError } from "@/lib/api-error";
-import { env } from "@/lib/env";
+import { env, getSupabasePublicAuthKey } from "@/lib/env";
 import { logWarn } from "@/lib/observability";
 
 export type AuthContext = {
@@ -22,7 +22,9 @@ export const AUTH_ACCESS_COOKIE = "cortexrate-access-token";
 export const AUTH_REFRESH_COOKIE = "cortexrate-refresh-token";
 
 async function getSupabaseAuthContextFromCookie(): Promise<AuthContext | null> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+  const publicAuthKey = getSupabasePublicAuthKey();
+
+  if (!env.SUPABASE_URL || !publicAuthKey) {
     return null;
   }
 
@@ -35,7 +37,7 @@ async function getSupabaseAuthContextFromCookie(): Promise<AuthContext | null> {
 
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
     headers: {
-      apikey: env.SUPABASE_ANON_KEY,
+      apikey: publicAuthKey,
       Authorization: `Bearer ${accessToken}`
     },
     cache: "no-store"
