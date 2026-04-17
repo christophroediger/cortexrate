@@ -2,7 +2,7 @@ import "server-only";
 
 import { ApiError } from "@/lib/api-error";
 import { env, getAppUrl } from "@/lib/env";
-import { logWarn } from "@/lib/observability";
+import { logInfo, logWarn } from "@/lib/observability";
 import { sanitizeRedirectPath } from "@/lib/redirects";
 import { findAuthAdminUserByEmail } from "@/server/repositories/auth-admin-users";
 
@@ -66,6 +66,9 @@ function isConfirmedAccountError(message: string) {
 
 async function resendConfirmationEmail(email: string) {
   const emailRedirectTo = getEmailRedirectTo();
+  logInfo("signup_resend_start", {
+    hasRedirectTo: Boolean(emailRedirectTo)
+  });
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/resend`, {
     method: "POST",
     headers: {
@@ -75,11 +78,8 @@ async function resendConfirmationEmail(email: string) {
     body: JSON.stringify({
       type: "signup",
       email,
-      email_redirect_to: emailRedirectTo,
-      redirect_to: emailRedirectTo,
       options: {
-        emailRedirectTo: emailRedirectTo,
-        email_redirect_to: emailRedirectTo
+        emailRedirectTo: emailRedirectTo
       }
     }),
     cache: "no-store"
@@ -95,14 +95,14 @@ async function resendConfirmationEmail(email: string) {
     if (isConfirmedAccountError(failureMessage)) {
       throw new ApiError(
         409,
-        "CONFLICT",
+        "SIGNUP_ACCOUNT_EXISTS",
         "An account with this email already exists. Please log in."
       );
     }
 
     throw new ApiError(
       400,
-      "BAD_REQUEST",
+      "SIGNUP_RESEND_FAILED",
       "Your account exists but we couldn't resend the confirmation email. Please try again later."
     );
   }
@@ -114,20 +114,30 @@ export async function signUpWithEmailPassword(
   redirectTo?: string
 ): Promise<SignupResult> {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-    throw new ApiError(500, "CONFIG_ERROR", "Supabase authentication is not configured.");
+    throw new ApiError(500, "SIGNUP_CONFIG_ERROR", "Supabase authentication is not configured.");
   }
 
+  logInfo("signup_request_received", {
+    hasRedirectTo: Boolean(redirectTo)
+  });
+
+  logInfo("signup_admin_lookup_start");
   const existingUser = await findAuthAdminUserByEmail(email);
+  logInfo("signup_admin_lookup_complete", {
+    foundUser: Boolean(existingUser),
+    isConfirmed: Boolean(existingUser?.emailConfirmedAt)
+  });
 
   if (existingUser?.emailConfirmedAt) {
     throw new ApiError(
       409,
-      "CONFLICT",
+      "SIGNUP_ACCOUNT_EXISTS",
       "An account with this email already exists. Please log in."
     );
   }
 
   if (existingUser && !existingUser.emailConfirmedAt) {
+    logInfo("signup_unconfirmed_existing_user");
     await resendConfirmationEmail(email);
 
     return {
@@ -137,6 +147,9 @@ export async function signUpWithEmailPassword(
   }
 
   const emailRedirectTo = getEmailRedirectTo();
+  logInfo("signup_fresh_attempt_start", {
+    hasRedirectTo: Boolean(emailRedirectTo)
+  });
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
     headers: {
@@ -146,11 +159,8 @@ export async function signUpWithEmailPassword(
     body: JSON.stringify({
       email,
       password,
-      email_redirect_to: emailRedirectTo,
-      redirect_to: emailRedirectTo,
       options: {
-        emailRedirectTo: emailRedirectTo,
-        email_redirect_to: emailRedirectTo
+        emailRedirectTo: emailRedirectTo
       }
     }),
     cache: "no-store"
@@ -164,6 +174,7 @@ export async function signUpWithEmailPassword(
     });
 
     if (isExistingUserError(failureMessage)) {
+      logInfo("signup_existing_user_branch");
       await resendConfirmationEmail(email);
 
       return {
@@ -174,12 +185,16 @@ export async function signUpWithEmailPassword(
 
     throw new ApiError(
       400,
-      "BAD_REQUEST",
+      "SIGNUP_SUPABASE_FAILED",
       "Sign-up could not be completed. Please try again."
     );
   }
 
   const authBody = (await response.json()) as SupabaseSignupResponse;
+  logInfo("signup_supabase_success", {
+    hasAccessToken: Boolean(authBody.access_token),
+    hasUser: Boolean(authBody.user)
+  });
 
   if (authBody.access_token) {
     return {

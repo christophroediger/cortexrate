@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
+import { logHandledRouteError } from "@/lib/observability";
 import { signUpWithEmailPassword } from "@/server/services/auth-signup";
 
 const signupRequestSchema = z.object({
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     const parsedBody = signupRequestSchema.safeParse(requestBody);
 
     if (!parsedBody.success) {
-      throw new ApiError(400, "BAD_REQUEST", "Invalid sign-up request.");
+      throw new ApiError(400, "SIGNUP_BAD_REQUEST", "Invalid sign-up request.");
     }
 
     const result = await signUpWithEmailPassword(
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
 
     return nextResponse;
   } catch (error) {
+    logHandledRouteError("signup_route_failed", error);
     return errorFromUnknown(error);
   }
 }

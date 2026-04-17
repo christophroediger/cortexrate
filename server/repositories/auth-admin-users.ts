@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ApiError } from "@/lib/api-error";
-import { logError } from "@/lib/observability";
+import { logError, logInfo } from "@/lib/observability";
 import { getRequiredSupabaseServerConfig, getSupabaseServerHeaders } from "@/server/supabase-server";
 
 type SupabaseAdminUser = {
@@ -45,6 +45,10 @@ export async function findAuthAdminUserByEmail(email: string): Promise<AuthAdmin
   const perPage = 1000;
 
   for (let page = 1; page <= 10; page += 1) {
+    logInfo("signup_admin_lookup_page", {
+      page,
+      perPage
+    });
     const response = await fetch(
       `${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
       {
@@ -79,6 +83,7 @@ export async function findAuthAdminUserByEmail(email: string): Promise<AuthAdmin
     }
   }
 
+  logInfo("signup_admin_lookup_not_found");
   return null;
 }
 
