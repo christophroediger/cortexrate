@@ -1,8 +1,8 @@
 import "server-only";
 
 import { ApiError } from "@/lib/api-error";
-import { env } from "@/lib/env";
 import { logError } from "@/lib/observability";
+import { getRequiredSupabaseServerConfig, getSupabaseServerHeaders } from "@/server/supabase-server";
 
 type SupabaseAdminUser = {
   id: string;
@@ -39,21 +39,16 @@ function getDisplayName(user: {
 }
 
 export async function findAuthAdminUserByEmail(email: string): Promise<AuthAdminUserLookup | null> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new ApiError(500, "CONFIG_ERROR", "Supabase admin authentication is not configured.");
-  }
+  const { supabaseUrl } = getRequiredSupabaseServerConfig();
 
   const normalizedEmail = email.trim().toLowerCase();
   const perPage = 1000;
 
   for (let page = 1; page <= 10; page += 1) {
     const response = await fetch(
-      `${env.SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+      `${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
       {
-        headers: {
-          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        },
+        headers: getSupabaseServerHeaders(),
         cache: "no-store"
       }
     );
@@ -88,9 +83,7 @@ export async function findAuthAdminUserByEmail(email: string): Promise<AuthAdmin
 }
 
 export async function listAuthAdminUsersByIds(userIds: string[]): Promise<Map<string, string | null>> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new ApiError(500, "CONFIG_ERROR", "Supabase admin authentication is not configured.");
-  }
+  const { supabaseUrl } = getRequiredSupabaseServerConfig();
 
   const remainingIds = new Set(userIds);
   const displayNames = new Map<string, string | null>();
@@ -98,12 +91,9 @@ export async function listAuthAdminUsersByIds(userIds: string[]): Promise<Map<st
 
   for (let page = 1; page <= 10 && remainingIds.size > 0; page += 1) {
     const response = await fetch(
-      `${env.SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+      `${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
       {
-        headers: {
-          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
-        },
+        headers: getSupabaseServerHeaders(),
         cache: "no-store"
       }
     );

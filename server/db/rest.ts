@@ -1,25 +1,10 @@
 import "server-only";
 
 import { ApiError } from "@/lib/api-error";
-import { env } from "@/lib/env";
 import { logError } from "@/lib/observability";
+import { getRequiredSupabaseServerConfig, getSupabaseServerHeaders } from "@/server/supabase-server";
 
 const REST_SCHEMA = "public";
-
-function getRequiredDatabaseConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new ApiError(
-      500,
-      "CONFIG_ERROR",
-      "Supabase server configuration is required for this endpoint."
-    );
-  }
-
-  return {
-    supabaseUrl: env.SUPABASE_URL,
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY
-  };
-}
 
 export async function supabaseRest<T>(path: string, init?: RequestInit): Promise<T> {
   return supabaseRestWithSchema<T>(REST_SCHEMA, path, init);
@@ -30,20 +15,18 @@ export async function supabaseRestWithSchema<T>(
   path: string,
   init?: RequestInit
 ): Promise<T> {
-  const { supabaseUrl, serviceRoleKey } = getRequiredDatabaseConfig();
+  const { supabaseUrl } = getRequiredSupabaseServerConfig();
 
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...init,
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+    headers: getSupabaseServerHeaders({
       "Content-Type": "application/json",
       Accept: "application/json",
       Prefer: "return=representation",
       "Accept-Profile": schema,
       "Content-Profile": schema,
       ...(init?.headers ?? {})
-    },
+    }),
     cache: "no-store"
   });
 
