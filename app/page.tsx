@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Image from "next/image";
 
 export default function HomePage() {
   return (
@@ -18,9 +18,9 @@ export default function HomePage() {
       <section
         style={{
           width: "100%",
-          maxWidth: 560,
+          maxWidth: 640,
           borderRadius: 24,
-          padding: "28px 24px",
+          padding: "28px 24px 26px",
           background:
             "linear-gradient(180deg, rgba(39, 39, 42, 0.92), rgba(24, 24, 27, 0.94))",
           border: "1px solid rgba(244, 244, 245, 0.07)",
@@ -31,20 +31,44 @@ export default function HomePage() {
           gap: 18
         }}
       >
-        <p
+        <div
           style={{
-            margin: 0,
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "rgba(244, 244, 245, 0.52)"
+            width: "fit-content",
+            padding: "12px 14px",
+            borderRadius: 20,
+            background: "rgba(255, 255, 255, 0.02)",
+            border: "1px solid rgba(244, 244, 245, 0.06)"
           }}
         >
-          CortexRate
-        </p>
+          <Image
+            src="/cortexrate-logo.jpg"
+            alt="CortexRate logo"
+            width={216}
+            height={144}
+            priority
+            style={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+              maxWidth: 216,
+              borderRadius: 14
+            }}
+          />
+        </div>
 
         <div style={{ display: "grid", gap: 10 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "rgba(244, 244, 245, 0.52)"
+            }}
+          >
+            CortexRate
+          </p>
           <h1
             style={{
               margin: 0,
@@ -54,16 +78,19 @@ export default function HomePage() {
               color: "#fafafa"
             }}
           >
-            Rate presets and captures
+            Rate presets. Discover better sounds.
           </h1>
           <p style={{ margin: 0, color: "#a1a1aa", fontSize: 16, lineHeight: 1.55 }}>
-            Quickly see what sounds good. Leave your own rating in seconds.
+            Free Chrome extension for rating presets. The more users rate presets, the
+            more useful CortexRate becomes.
           </p>
         </div>
 
         <div style={{ display: "grid", gap: 12, justifyItems: "start" }}>
-          <Link
-            href="/login"
+          <a
+            href="https://chromewebstore.google.com/detail/cortexrate-mvp/fjjcnhcabdpjobkdcnejcipjcnfkiekj"
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -76,19 +103,19 @@ export default function HomePage() {
               textDecoration: "none"
             }}
           >
-            Log in to rate
-          </Link>
+            Add to Chrome — Free
+          </a>
 
-          <Link
-            href="/signup"
+          <p
             style={{
+              margin: 0,
               color: "#a1a1aa",
               fontSize: 14,
-              textDecoration: "none"
+              lineHeight: 1.5
             }}
           >
-            New here? Sign up
-          </Link>
+            Free · Chrome extension · Early, but already usable
+          </p>
         </div>
       </section>
     </main>
