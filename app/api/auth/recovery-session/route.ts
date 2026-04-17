@@ -38,6 +38,7 @@ export async function POST(request: Request) {
 
     let accessToken: string;
     let refreshToken: string | null | undefined;
+    let sessionSource: "token" | "token_hash";
 
     if (parsedTokenBody.success) {
       const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
 
       accessToken = parsedTokenBody.data.access_token;
       refreshToken = parsedTokenBody.data.refresh_token;
+      sessionSource = "token";
     } else {
       const tokenHashBody = parsedTokenHashBody.data;
 
@@ -86,13 +88,19 @@ export async function POST(request: Request) {
 
       const verifyBody = (await verifyResponse.json()) as SupabaseVerifyResponse;
 
+      if (!verifyBody.access_token) {
+        throw new ApiError(401, "UNAUTHORIZED", "Your reset link is no longer valid.");
+      }
+
       accessToken = verifyBody.access_token;
       refreshToken = verifyBody.refresh_token;
+      sessionSource = "token_hash";
     }
 
     const nextResponse = NextResponse.json({
       data: {
-        ok: true
+        ok: true,
+        session_source: sessionSource
       }
     });
 

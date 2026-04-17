@@ -32,6 +32,7 @@ export function UpdatePasswordForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSettingSession, setIsSettingSession] = useState(true);
+  const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function UpdatePasswordForm() {
 
       if (type !== "recovery" || (!accessToken && !tokenHash)) {
         if (isMounted) {
+          setIsRecoveryReady(false);
           setIsSettingSession(false);
           setErrorMessage("Open the password reset link from your email to continue.");
         }
@@ -51,6 +53,7 @@ export function UpdatePasswordForm() {
       try {
         const response = await fetch("/api/auth/recovery-session", {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json"
           },
@@ -71,9 +74,14 @@ export function UpdatePasswordForm() {
 
         if (!response.ok) {
           if (isMounted) {
+            setIsRecoveryReady(false);
             setErrorMessage(responseBody.error?.message ?? "Your reset link is no longer valid.");
           }
           return;
+        }
+
+        if (isMounted) {
+          setIsRecoveryReady(true);
         }
 
         const cleanUrl = new URL(window.location.href);
@@ -85,6 +93,7 @@ export function UpdatePasswordForm() {
         window.history.replaceState({}, "", cleanUrl.toString());
       } catch {
         if (isMounted) {
+          setIsRecoveryReady(false);
           setErrorMessage("Your reset link is no longer valid.");
         }
       } finally {
@@ -103,6 +112,13 @@ export function UpdatePasswordForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!isRecoveryReady) {
+      setErrorMessage("Open the password reset link from your email to continue.");
+      setSuccessMessage(null);
+      return;
+    }
+
     setIsPending(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -110,6 +126,7 @@ export function UpdatePasswordForm() {
     try {
       const response = await fetch("/api/auth/update-password", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json"
         },
@@ -147,7 +164,7 @@ export function UpdatePasswordForm() {
           minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          disabled={isSettingSession || isPending}
+          disabled={isSettingSession || isPending || !isRecoveryReady}
           style={{
             padding: "12px 14px",
             borderRadius: 14,
@@ -161,15 +178,17 @@ export function UpdatePasswordForm() {
 
       <button
         type="submit"
-        disabled={isSettingSession || isPending}
+        disabled={isSettingSession || isPending || !isRecoveryReady}
         style={{
           padding: "12px 18px",
           borderRadius: 999,
           border: "none",
-          backgroundColor: isSettingSession || isPending ? "#3f3f46" : "#fafafa",
+          backgroundColor:
+            isSettingSession || isPending || !isRecoveryReady ? "#3f3f46" : "#fafafa",
           color: "#18181b",
           fontWeight: 700,
-          cursor: isSettingSession || isPending ? "default" : "pointer",
+          cursor:
+            isSettingSession || isPending || !isRecoveryReady ? "default" : "pointer",
           justifySelf: "start"
         }}
       >
