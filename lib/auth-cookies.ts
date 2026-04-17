@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { NextResponse } from "next/server";
 
 import { AUTH_ACCESS_COOKIE, AUTH_REFRESH_COOKIE } from "@/lib/auth";

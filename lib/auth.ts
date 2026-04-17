@@ -1,7 +1,10 @@
+import "server-only";
+
 import { cookies, headers } from "next/headers";
 
 import { ApiError } from "@/lib/api-error";
 import { env } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
 
 export type AuthContext = {
   userId: string;
@@ -39,6 +42,9 @@ async function getSupabaseAuthContextFromCookie(): Promise<AuthContext | null> {
   });
 
   if (!response.ok) {
+    logWarn("supabase_cookie_auth_invalid", {
+      status: response.status
+    });
     return null;
   }
 
@@ -64,6 +70,9 @@ export async function getAuthContext(): Promise<AuthContext | null> {
   const developmentEmail = requestHeaders.get("x-dev-user-email");
 
   if (env.DEV_AUTH_ENABLED && env.NODE_ENV !== "production") {
+    logWarn("dev_auth_fallback_used", {
+      hasHeaderOverride: Boolean(developmentUserId || developmentEmail)
+    });
     return {
       userId: developmentUserId ?? env.DEV_AUTH_USER_ID,
       email: developmentEmail ?? env.DEV_AUTH_USER_EMAIL,

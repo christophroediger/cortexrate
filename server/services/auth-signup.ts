@@ -2,6 +2,8 @@ import "server-only";
 
 import { ApiError } from "@/lib/api-error";
 import { env, getAppUrl } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
+import { sanitizeRedirectPath } from "@/lib/redirects";
 import { findAuthAdminUserByEmail } from "@/server/repositories/auth-admin-users";
 
 type SupabaseSignupResponse = {
@@ -85,6 +87,10 @@ async function resendConfirmationEmail(email: string) {
 
   if (!response.ok) {
     const failureMessage = await parseAuthError(response);
+    logWarn("signup_confirmation_resend_failed", {
+      status: response.status,
+      reason: failureMessage
+    });
 
     if (isConfirmedAccountError(failureMessage)) {
       throw new ApiError(
@@ -152,6 +158,10 @@ export async function signUpWithEmailPassword(
 
   if (!response.ok) {
     const failureMessage = await parseAuthError(response);
+    logWarn("signup_failed", {
+      status: response.status,
+      reason: failureMessage
+    });
 
     if (isExistingUserError(failureMessage)) {
       await resendConfirmationEmail(email);
@@ -174,7 +184,7 @@ export async function signUpWithEmailPassword(
   if (authBody.access_token) {
     return {
       status: "authenticated",
-      redirectTo: redirectTo || "/",
+      redirectTo: sanitizeRedirectPath(redirectTo, "/"),
       accessToken: authBody.access_token,
       refreshToken: authBody.refresh_token
     };

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown, ok } from "@/lib/api-response";
 import { requireAuthContext } from "@/lib/auth";
+import { logHandledRouteError } from "@/lib/observability";
 import { getCanonicalItemReviews } from "@/server/services/review-read";
 import { upsertReview } from "@/server/services/review-upsert";
 
@@ -64,13 +65,11 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  let canonicalItemId: string | null = null;
+
   try {
     const authContext = await requireAuthContext();
-    console.info("CortexRate review submit auth", {
-      userId: authContext.userId,
-      authSource: authContext.source
-    });
-    const canonicalItemId = await parseCanonicalItemId(context);
+    canonicalItemId = await parseCanonicalItemId(context);
     const requestBody = await request.json();
     const parsedBody = upsertReviewRequestSchema.safeParse(requestBody);
 
@@ -87,6 +86,9 @@ export async function POST(request: Request, context: RouteContext) {
       })
     );
   } catch (error) {
+    logHandledRouteError("review_submit_failed", error, {
+      canonicalItemId
+    });
     return errorFromUnknown(error);
   }
 }

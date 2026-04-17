@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError, isApiError } from "@/lib/api-error";
 import { created, errorResponse } from "@/lib/api-response";
 import { requireAuthContext } from "@/lib/auth";
+import { logHandledRouteError } from "@/lib/observability";
 import { storeFeedback } from "@/server/services/feedback-create";
 
 const createFeedbackRequestSchema = z.object({
@@ -21,11 +22,6 @@ export async function POST(request: Request) {
       throw new ApiError(400, "BAD_REQUEST", "Invalid feedback request.");
     }
 
-    console.info("CortexRate feedback submit auth", {
-      userId: authContext.userId,
-      authSource: authContext.source
-    });
-
     const feedback = await storeFeedback({
       message: parsedBody.data.message,
       rating: parsedBody.data.rating ?? null,
@@ -38,6 +34,8 @@ export async function POST(request: Request) {
       created_at: feedback.created_at
     });
   } catch (error) {
+    logHandledRouteError("feedback_submit_failed", error);
+
     if (isApiError(error)) {
       if (error.status === 400 || error.status === 401) {
         return errorResponse(error.status, error.code, error.message);

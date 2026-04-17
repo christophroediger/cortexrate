@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { env, getAppUrl } from "@/lib/env";
+import { env } from "@/lib/env";
 import { LOGIN_FLASH_COOKIE, LOGIN_FLASH_MAX_AGE_SECONDS } from "@/lib/login-flash";
-
-function buildLoginRedirect(message: "account-confirmed" | "verification-error") {
-  return new URL(`/login?message=${message}`, getAppUrl());
-}
+import { logWarn } from "@/lib/observability";
 
 function withFlashRedirect(
   message: "account-confirmed" | "verification-error",
@@ -53,11 +50,18 @@ export async function GET(request: Request) {
     });
 
     if (!verifyResponse.ok) {
+      logWarn("signup_confirmation_verify_failed", {
+        status: verifyResponse.status,
+        type
+      });
       return withFlashRedirect("verification-error", requestUrl);
     }
 
     return withFlashRedirect("account-confirmed", requestUrl);
   } catch {
+    logWarn("signup_confirmation_request_failed", {
+      type
+    });
     return withFlashRedirect("verification-error", requestUrl);
   }
 }

@@ -2,7 +2,8 @@ import "server-only";
 
 import type { GetCanonicalItemReviewsResponse } from "@/types/api";
 import type { PublicReview, RatingSummary, Review } from "@/types/domain";
-import { supabaseRest, supabaseRestWithSchema } from "@/server/db/rest";
+import { listAuthAdminUsersByIds } from "@/server/repositories/auth-admin-users";
+import { supabaseRest } from "@/server/db/rest";
 
 type ActiveReviewRow = {
   rating: number;
@@ -17,16 +18,6 @@ type ReviewRow = {
   state: "active" | "flagged" | "hidden";
   created_at: string;
   updated_at: string;
-};
-
-type AuthUserRow = {
-  id: string;
-  email: string | null;
-  raw_user_meta_data: {
-    display_name?: string;
-    full_name?: string;
-    user_name?: string;
-  } | null;
 };
 
 type UpsertReviewInput = {
@@ -144,39 +135,15 @@ export async function updateReview(
 }
 
 async function getUserDisplayNames(userIds: string[]): Promise<Map<string, string | null>> {
-  const displayNames = new Map<string, string | null>();
-
   if (!userIds.length) {
-    return displayNames;
+    return new Map<string, string | null>();
   }
 
   try {
-    const rows = await supabaseRestWithSchema<AuthUserRow[]>(
-      "auth",
-      `users?select=id,email,raw_user_meta_data&id=in.(${userIds
-        .map((userId) => `"${encodeURIComponent(userId)}"`)
-        .join(",")})`
-    );
-
-    for (const row of rows) {
-      displayNames.set(
-        row.id,
-        row.raw_user_meta_data?.display_name ??
-          row.raw_user_meta_data?.full_name ??
-          row.raw_user_meta_data?.user_name ??
-          row.email ??
-          null
-      );
-    }
+    return await listAuthAdminUsersByIds(userIds);
   } catch {
-    for (const userId of userIds) {
-      if (!displayNames.has(userId)) {
-        displayNames.set(userId, null);
-      }
-    }
+    return new Map(userIds.map((userId) => [userId, null]));
   }
-
-  return displayNames;
 }
 
 export async function listActiveReviewsByCanonicalItem(

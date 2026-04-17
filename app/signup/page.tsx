@@ -1,4 +1,5 @@
 import { SignUpForm } from "@/components/auth/sign-up-form";
+import { sanitizeRedirectPath } from "@/lib/redirects";
 
 type SignupPageProps = {
   searchParams: Promise<{
@@ -68,7 +69,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           </p>
         </div>
 
-        <SignUpForm redirectTo={redirectTo || "/"} />
+        <SignUpForm redirectTo={sanitizeRedirectPath(redirectTo, "/")} />
       </section>
     </main>
   );

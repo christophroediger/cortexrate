@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { env, getAppUrl } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
 
 const resetPasswordRequestSchema = z.object({
   email: z.string().email()
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
+      logWarn("reset_password_email_failed", {
+        status: response.status
+      });
       throw new ApiError(400, "BAD_REQUEST", "We couldn't send the reset link.");
     }
 

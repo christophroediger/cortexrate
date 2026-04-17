@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
 import { env } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
 
 const tokenSessionRequestSchema = z.object({
   access_token: z.string().min(1),
@@ -48,6 +49,9 @@ export async function POST(request: Request) {
       });
 
       if (!userResponse.ok) {
+        logWarn("recovery_session_invalid_access_token", {
+          status: userResponse.status
+        });
         throw new ApiError(401, "UNAUTHORIZED", "Your reset link is no longer valid.");
       }
 
@@ -74,6 +78,9 @@ export async function POST(request: Request) {
       });
 
       if (!verifyResponse.ok) {
+        logWarn("recovery_session_verify_failed", {
+          status: verifyResponse.status
+        });
         throw new ApiError(401, "UNAUTHORIZED", "Your reset link is no longer valid.");
       }
 

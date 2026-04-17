@@ -2,6 +2,7 @@ import "server-only";
 
 import { ApiError } from "@/lib/api-error";
 import { env } from "@/lib/env";
+import { logError } from "@/lib/observability";
 
 const REST_SCHEMA = "public";
 
@@ -49,11 +50,14 @@ export async function supabaseRestWithSchema<T>(
   if (!response.ok) {
     const failureText = await response.text();
 
-    throw new ApiError(
-      500,
-      "DATABASE_ERROR",
-      `Supabase REST request failed with status ${response.status}: ${failureText}`
-    );
+    logError("supabase_rest_request_failed", {
+      schema,
+      path,
+      status: response.status,
+      responseText: failureText
+    });
+
+    throw new ApiError(500, "DATABASE_ERROR", "A database error occurred.");
   }
 
   if (response.status === 204) {

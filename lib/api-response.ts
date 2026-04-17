@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isApiError } from "@/lib/api-error";
+import { logUnexpectedError } from "@/lib/observability";
 
 type ErrorBody = {
   error: {
@@ -37,6 +38,8 @@ export function errorFromUnknown(error: unknown) {
   if (isApiError(error)) {
     return errorResponse(error.status, error.code, error.message);
   }
+
+  logUnexpectedError("unexpected_api_error", error);
 
   return errorResponse(500, "INTERNAL_ERROR", "An unexpected error occurred.");
 }

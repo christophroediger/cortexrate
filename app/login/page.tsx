@@ -1,5 +1,6 @@
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { LOGIN_FLASH_COOKIE } from "@/lib/login-flash";
+import { sanitizeRedirectPath } from "@/lib/redirects";
 import { cookies } from "next/headers";
 
 type LoginPageProps = {
@@ -81,7 +82,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         </div>
 
-        <SignInForm redirectTo={redirectTo || "/"} initialMessage={pageMessage} />
+        <SignInForm
+          redirectTo={sanitizeRedirectPath(redirectTo, "/")}
+          initialMessage={pageMessage}
+        />
       </section>
     </main>
   );

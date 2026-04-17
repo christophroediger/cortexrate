@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AUTH_ACCESS_COOKIE } from "@/lib/auth";
 import { clearAuthCookies } from "@/lib/auth-cookies";
 import { env } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
 
 export async function POST() {
   const cookieStore = await cookies();
@@ -20,6 +21,7 @@ export async function POST() {
         cache: "no-store"
       });
     } catch {
+      logWarn("logout_supabase_call_failed");
       // Best-effort sign-out with cookie cleanup below.
     }
   }

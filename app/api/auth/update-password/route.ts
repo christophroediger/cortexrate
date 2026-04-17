@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { AUTH_ACCESS_COOKIE } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
 
 const updatePasswordRequestSchema = z.object({
   password: z.string().min(8)
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
+      logWarn("password_update_failed", {
+        status: response.status
+      });
       throw new ApiError(400, "BAD_REQUEST", "We couldn't update your password.");
     }
 

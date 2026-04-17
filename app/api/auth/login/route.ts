@@ -5,6 +5,8 @@ import { ApiError } from "@/lib/api-error";
 import { errorFromUnknown } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
 import { env } from "@/lib/env";
+import { logWarn } from "@/lib/observability";
+import { sanitizeRedirectPath } from "@/lib/redirects";
 
 const loginRequestSchema = z.object({
   email: z.string().email(),
@@ -44,13 +46,16 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
+      logWarn("login_failed", {
+        status: response.status
+      });
       throw new ApiError(401, "UNAUTHORIZED", "Invalid email or password.");
     }
 
     const authBody = (await response.json()) as SupabaseLoginResponse;
     const nextResponse = NextResponse.json({
       data: {
-        redirect_to: parsedBody.data.redirect_to || "/"
+        redirect_to: sanitizeRedirectPath(parsedBody.data.redirect_to, "/")
       }
     });
 
