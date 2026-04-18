@@ -1,0 +1,12 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="braveFill" x1="14" y1="12" x2="49" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7A18"/>
+      <stop offset="1" stop-color="#FF3D00"/>
+    </linearGradient>
+  </defs>
+  <path d="M21.5 10L28.5 6H35.5L42.5 10L50.5 10.5L56 17.5L53.5 25L56 32.5L52 45L32 58L12 45L8 32.5L10.5 25L8 17.5L13.5 10.5L21.5 10Z" fill="url(#braveFill)"/>
+  <path d="M22 20L27.5 17H36.5L42 20L46 24.5L45 31L40.5 36L36 35L32 38L28 35L23.5 36L19 31L18 24.5L22 20Z" fill="white"/>
+  <path d="M27.5 23.5L31 24.4L32 29L33 24.4L36.5 23.5L39.5 24.8L36.5 27L35.8 31.8L32 34.7L28.2 31.8L27.5 27L24.5 24.8L27.5 23.5Z" fill="#FF6B2C"/>
+  <path d="M27.8 39L32 42.5L36.2 39L39 40L35.2 45H28.8L25 40L27.8 39Z" fill="white"/>
+</svg>

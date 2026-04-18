@@ -1,5 +1,12 @@
 import Image from "next/image";
 
+const browserLogos = [
+  { src: "/browsers/brave.svg", alt: "Brave browser logo" },
+  { src: "/browsers/vivaldi.svg", alt: "Vivaldi browser logo" },
+  { src: "/browsers/edge.svg", alt: "Microsoft Edge browser logo" },
+  { src: "/browsers/chrome.svg", alt: "Google Chrome browser logo" }
+];
+
 export default function HomePage() {
   return (
     <main
@@ -115,6 +122,53 @@ export default function HomePage() {
           >
             Free · Works instantly · No signup required
           </p>
+
+          <div
+            style={{
+              width: "100%",
+              display: "grid",
+              gap: 10,
+              justifyItems: "center",
+              paddingTop: 2
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "rgba(228, 228, 231, 0.76)",
+                fontSize: 13,
+                lineHeight: 1.5,
+                textAlign: "center"
+              }}
+            >
+              Works on Brave, Vivaldi, Edge, Chrome & other Chromium browsers
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 16,
+                flexWrap: "wrap",
+                width: "100%"
+              }}
+            >
+              {browserLogos.map((browser) => (
+                <Image
+                  key={browser.src}
+                  src={browser.src}
+                  alt={browser.alt}
+                  width={24}
+                  height={24}
+                  style={{
+                    opacity: 0.72,
+                    display: "block"
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </section>
     </main>
